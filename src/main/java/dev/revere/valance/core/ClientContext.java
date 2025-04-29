@@ -5,10 +5,7 @@ import dev.revere.valance.core.annotation.Service;
 import dev.revere.valance.core.exception.ClientInitializationException;
 import dev.revere.valance.core.exception.ServiceException;
 import dev.revere.valance.core.lifecycle.IService;
-import dev.revere.valance.service.impl.CommandManagerService;
-import dev.revere.valance.service.impl.ConfigManagerService;
-import dev.revere.valance.service.impl.EventBusService;
-import dev.revere.valance.service.impl.ModuleManagerService;
+import dev.revere.valance.service.impl.*;
 import dev.revere.valance.util.ReflectionUtil;
 
 import java.lang.reflect.Constructor;
@@ -112,7 +109,8 @@ public class ClientContext {
                 EventBusService.class,
                 ModuleManagerService.class,
                 ConfigManagerService.class,
-                CommandManagerService.class
+                CommandManagerService.class,
+                SkijaService.class
         );
         System.out.println(LOG_PREFIX + "Discovered " + implementations.size() + " potential implementations.");
         return implementations;
@@ -216,7 +214,7 @@ public class ClientContext {
             System.out.println(LOG_PREFIX + "Constructed service: " + serviceInterface.getSimpleName() + " successfully.");
             return newInstance;
 
-        } catch (Exception e) {.
+        } catch (Exception e) {
             serviceStates.put(serviceInterface, ServiceState.FAILED);
             System.err.println(LOG_PREFIX + "[ERROR] Failed to construct service: " + serviceInterface.getName());
             throw new ServiceException("Construction failed for service " + serviceInterface.getName(), e);

@@ -1,10 +1,13 @@
 package dev.revere.valance.module;
 
+import lombok.Getter;
+
 /**
  * @author Remi
  * @project valance
  * @date 4/28/2025
  */
+@Getter
 public enum Category {
     COMBAT("Combat"),
     MOVEMENT("Movement"),
@@ -20,10 +23,6 @@ public enum Category {
 
     Category(String displayName) {
         this.displayName = displayName;
-    }
-
-    public String getDisplayName() {
-        return displayName;
     }
 
     @Override

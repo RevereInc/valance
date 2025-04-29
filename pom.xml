@@ -56,6 +56,21 @@
 
     <dependencies>
         <dependency>
+            <groupId>io.github.humbleui</groupId>
+            <artifactId>skija-windows-x64</artifactId>
+            <version>0.116.4</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.humbleui</groupId>
+            <artifactId>skija-linux-x64</artifactId>
+            <version>0.116.4</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.humbleui</groupId>
+            <artifactId>skija-macos-x64</artifactId>
+            <version>0.116.4</version>
+        </dependency>
+        <dependency>
             <groupId>fr.litarvan</groupId>
             <artifactId>openauth</artifactId>
             <version>1.1.6</version>
@@ -260,11 +275,6 @@
             <artifactId>Java-WebSocket</artifactId>
             <version>1.5.6</version>
             <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.github.JnCrMx</groupId>
-            <artifactId>discord-game-sdk4j</artifactId>
-            <version>0.5.5</version>
         </dependency>
     </dependencies>
 </project>

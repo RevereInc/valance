@@ -9,6 +9,7 @@ import dev.revere.valance.core.lifecycle.IService;
 import dev.revere.valance.module.Category;
 import dev.revere.valance.module.annotation.ModuleInfo;
 import dev.revere.valance.module.api.IModule;
+import dev.revere.valance.module.impl.client.ClickGuiModule;
 import dev.revere.valance.module.impl.misc.AutoRegisterBotModule;
 import dev.revere.valance.module.impl.misc.InfoModule;
 import dev.revere.valance.module.impl.misc.NetworkStatsModule;
@@ -68,7 +69,8 @@ public class ModuleManagerService implements IModuleManager {
                 InfoModule.class,
                 NetworkStatsModule.class,
                 ProxyCrashModule.class,
-                AutoRegisterBotModule.class
+                AutoRegisterBotModule.class,
+                ClickGuiModule.class
         );
 
         for (Class<? extends IModule> moduleClass : moduleClassesToRegister) {
@@ -124,7 +126,6 @@ public class ModuleManagerService implements IModuleManager {
      * @throws ServiceException if the dependency cannot be resolved.
      */
     private Object resolveModuleDependency(Class<?> dependencyType, Class<?> requiringModule) throws ServiceException {
-        // Check if it's a known Service interface
         if (IService.class.isAssignableFrom(dependencyType) && dependencyType.isInterface()) {
             @SuppressWarnings("unchecked")
             Class<? extends IService> serviceInterface = (Class<? extends IService>) dependencyType;

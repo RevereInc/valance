@@ -41,27 +41,22 @@ public final class ClientLoader {
         System.out.println(" Initializing " + CLIENT_NAME + " v" + CLIENT_VERSION + " for MC " + MINECRAFT_VERSION);
         System.out.println("========================================");
 
-        Thread initThread = new Thread(() -> {
-            try {
-                ClientContext newContext = new ClientContext();
-                newContext.initialize();
-                context = newContext;
-                initialized = true;
-                System.out.println("========================================");
-                System.out.println(" " + CLIENT_NAME + " Initialized Successfully!");
-                System.out.println("========================================\n");
-            } catch (ClientInitializationException e) {
-                System.err.println("\n[" + CLIENT_NAME + ":Loader] [FATAL] CLIENT INITIALIZATION FAILED!");
-            } catch (Throwable t) {
-                System.err.println("\n[" + CLIENT_NAME + ":Loader] [FATAL] UNEXPECTED ERROR DURING INITIALIZATION!");
-                t.printStackTrace();
-            } finally {
-                initializing = false;
-            }
-        });
-
-        initThread.setName(CLIENT_NAME + "-InitializationThread");
-        initThread.start();
+        try {
+            ClientContext newContext = new ClientContext();
+            newContext.initialize();
+            context = newContext;
+            initialized = true;
+            System.out.println("========================================");
+            System.out.println(" " + CLIENT_NAME + " Initialized Successfully!");
+            System.out.println("========================================\n");
+        } catch (ClientInitializationException e) {
+            System.err.println("\n[" + CLIENT_NAME + ":Loader] [FATAL] CLIENT INITIALIZATION FAILED!");
+        } catch (Throwable t) {
+            System.err.println("\n[" + CLIENT_NAME + ":Loader] [FATAL] UNEXPECTED ERROR DURING INITIALIZATION!");
+            t.printStackTrace();
+        } finally {
+            initializing = false;
+        }
     }
 
     /**

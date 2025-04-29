@@ -27,9 +27,8 @@ import static dev.revere.valance.util.MinecraftUtil.sendClientMessage;
 public class CommandManagerService implements ICommandService {
     private static final String LOG_PREFIX = "[" + ClientLoader.CLIENT_NAME + ":CommandManager] ";
 
-    private final IModuleManager moduleManager; // Needed by commands like .toggle, .setting
+    private final IModuleManager moduleManager;
 
-    // Use ConcurrentHashMap for thread safety if commands could be registered dynamically
     private final Map<String, ICommand> commandMap = new ConcurrentHashMap<>();
 
     @Inject
@@ -56,10 +55,9 @@ public class CommandManagerService implements ICommandService {
     @Override
     public void shutdown(ClientContext context) throws ServiceException {
         System.out.println(LOG_PREFIX + "Shutting down...");
-        commandMap.clear(); // Clear registry
+        commandMap.clear();
         System.out.println(LOG_PREFIX + "Shutdown complete.");
     }
-
 
     @Override
     public void register(ICommand command) {
@@ -88,10 +86,9 @@ public class CommandManagerService implements ICommandService {
         ICommand removed = commandMap.remove(nameLower);
         if (removed != null) {
             System.out.println(LOG_PREFIX + "Unregistered command trigger: " + nameLower);
-            // Remove aliases too
             for (String alias : command.getAliases()) {
                 String aliasLower = alias.toLowerCase();
-                if (commandMap.get(aliasLower) == command) { // Ensure we only remove if it points to the same command instance
+                if (commandMap.get(aliasLower) == command) {
                     commandMap.remove(aliasLower);
                     System.out.println(LOG_PREFIX + "Unregistered command trigger: " + aliasLower);
                 }
@@ -121,12 +118,11 @@ public class CommandManagerService implements ICommandService {
             return true;
         }
 
-        String[] parts = trimmedInput.split("\\s+", 2); // Split into command name and the rest (args)
+        String[] parts = trimmedInput.split("\\s+", 2);
         String commandName = parts[0].toLowerCase();
         String[] args = (parts.length > 1 && parts[1] != null && !parts[1].trim().isEmpty())
-                ? parts[1].trim().split("\\s+") // Split remaining into args
-                : new String[0]; // No arguments
-
+                ? parts[1].trim().split("\\s+")
+                : new String[0];
 
         Optional<ICommand> commandOpt = getCommand(commandName);
 
@@ -138,9 +134,8 @@ public class CommandManagerService implements ICommandService {
             } catch (CommandException e) {
                 System.err.println(LOG_PREFIX + "[ERROR] Command error (" + command.getName() + "): " + e.getMessage());
                 sendClientMessage("Error: " + e.getMessage(), true);
-                // Optionally send usage info on error
                 sendClientMessage("Usage: " + getPrefix() + command.getName() + " " + command.getUsage(), true);
-            } catch (Throwable t) { // Catch unexpected runtime errors during execution
+            } catch (Throwable t) {
                 System.err.println(LOG_PREFIX + "[CRITICAL] Unexpected error executing command: " + command.getName());
                 t.printStackTrace();
                 sendClientMessage("An internal error occurred while executing '" + command.getName() + "'. Check logs.", true);
