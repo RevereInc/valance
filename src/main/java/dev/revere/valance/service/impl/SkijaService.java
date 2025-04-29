@@ -155,13 +155,12 @@ public class SkijaService implements ISkijaService {
                 int samples = 0; // no multisampling
                 int stencilBits = 8; // stencil buffer size
 
-
                 renderTarget = BackendRenderTarget.makeGL(
                         currentWidth,
                         currentHeight,
                         samples,
                         stencilBits,
-                        0,
+                        fboId,
                         FramebufferFormat.GR_GL_RGBA8
                 );
 
@@ -234,6 +233,13 @@ public class SkijaService implements ISkijaService {
 
     @Override
     public void runFrame(Runnable render) {
+        try {
+            ensureSurface();
+        } catch (ServiceException e) {
+            System.err.println(LOG_PREFIX + "[ERROR] Failed to ensure Skija surface before running frame: " + e.getMessage());
+            return;
+        }
+
         if (!isInitialized()) {
             return;
         }

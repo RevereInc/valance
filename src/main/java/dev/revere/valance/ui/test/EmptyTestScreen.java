@@ -60,10 +60,10 @@ public class EmptyTestScreen extends GuiScreen {
                         float textWidth = SkijaRenderUtil.getTextWidth(text, fontSize);
                         float textX = (this.width / 2f) - (textWidth / 2f);
                         float textY = rectY + rectHeight + 20;
-                        SkijaRenderUtil.drawText(text, textX, textY, 0xFFFFFFFF, fontSize);
+                        SkijaRenderUtil.drawText(text, textX, textY, fontSize, 0xFFFFFFFF);
 
                         String debugText = "Skija Initialized - Width: " + this.width + ", Height: " + this.height;
-                        SkijaRenderUtil.drawText(debugText, 10, 10, 0xFFFFFFFF, 12.0f);
+                        SkijaRenderUtil.drawText(debugText, 10, 10, 12.0f, 0xFFFFFFFF);
                     } else {
                         System.err.println("[EmptyTestScreen] Canvas is null in drawScreen.");
                     }

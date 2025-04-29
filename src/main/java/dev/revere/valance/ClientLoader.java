@@ -1,6 +1,7 @@
 package dev.revere.valance;
 
 import dev.revere.valance.core.ClientContext;
+import dev.revere.valance.core.debug.GLDebugLogger;
 import dev.revere.valance.core.exception.ClientInitializationException;
 import dev.revere.valance.core.lifecycle.IService;
 
@@ -32,6 +33,7 @@ public final class ClientLoader {
      * This method is synchronized to prevent concurrent initialization attempts.
      */
     public static synchronized void initialize() {
+        GLDebugLogger.init();
         if (initialized || initializing) {
             System.err.println("[" + CLIENT_NAME + ":Loader] [WARN] Initialization already completed or in progress.");
             return;

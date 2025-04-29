@@ -69,49 +69,17 @@ public final class SkijaRenderUtil {
         });
     }
 
-    public static void drawText(String text, float x, float y, int color, float fontSize) {
+    public static void drawText(String text, float x, float y, float size, int color) {
         getCanvas().ifPresent(canvas -> {
-            getFontCollection().ifPresent(fontCollection -> {
-                try (TextStyle style = new TextStyle().setColor(color).setFontSize(fontSize);
-                     ParagraphStyle pStyle = new ParagraphStyle();
-                     ParagraphBuilder builder = new ParagraphBuilder(pStyle, fontCollection)) {
-
-                    builder.pushStyle(style);
-                    builder.addText(text);
-                    builder.popStyle();
-
-                    try (Paragraph paragraph = builder.build()) {
-                        paragraph.layout(Float.POSITIVE_INFINITY);
-                        paragraph.paint(canvas, x, y);
-                    }
-                } catch(Exception e) {
-                    System.err.println("[" + ClientLoader.CLIENT_NAME + ":SkijaUtil] Error drawing text: " + e.getMessage());
-                }
-            });
+            Paint paint = new Paint().setColor(color).setAntiAlias(true).setMode(PaintMode.FILL);
+            Font font = new Font(Typeface.makeDefault(), size);
+            canvas.drawString(text, x, y, font, paint);
         });
     }
 
-    public static float getTextWidth(String text, float fontSize) {
-        Optional<FontCollection> fontCollectionOpt = getFontCollection();
-        if (fontCollectionOpt.isPresent()) {
-            FontCollection fontCollection = fontCollectionOpt.get();
-            try (TextStyle style = new TextStyle().setFontSize(fontSize);
-                 ParagraphStyle pStyle = new ParagraphStyle();
-                 ParagraphBuilder builder = new ParagraphBuilder(pStyle, fontCollection)) {
-
-                builder.pushStyle(style);
-                builder.addText(text);
-                builder.popStyle();
-
-                try (Paragraph paragraph = builder.build()) {
-                    paragraph.layout(Float.POSITIVE_INFINITY);
-                    return paragraph.getMaxWidth();
-                }
-            } catch (Exception e) {
-                System.err.println("[" + ClientLoader.CLIENT_NAME + ":SkijaUtil] Error getting text width: " + e.getMessage());
-            }
-        }
-        return MinecraftUtil.mc().fontRendererObj.getStringWidth(text);
+    public static float getTextWidth(String text, float size) {
+        Font font = new Font(Typeface.makeDefault(), size);
+        return font.measureText(text).getWidth();
     }
 
     public static void drawGradientRect(float x, float y, float width, float height, int colorStart, int colorEnd, boolean horizontal) {
