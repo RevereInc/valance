@@ -42,4 +42,13 @@ public interface IModuleManager extends IService {
      * @return An unmodifiable list of modules in the specified category.
      */
     List<IModule> getModulesInCategory(Category category);
+
+    /**
+     * Retrieves all modules of a specific type.
+     *
+     * @param type The class type of the module.
+     * @param <T>  The type of the module.
+     * @return An unmodifiable list of modules of the specified type.
+     */
+    <T extends IModule> List<T> getModulesOfType(Class<T> type);
 }

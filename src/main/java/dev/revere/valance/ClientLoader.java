@@ -33,7 +33,7 @@ public final class ClientLoader {
      * This method is synchronized to prevent concurrent initialization attempts.
      */
     public static synchronized void initialize() {
-        GLDebugLogger.init();
+        // GLDebugLogger.init();
         if (initialized || initializing) {
             System.err.println("[" + CLIENT_NAME + ":Loader] [WARN] Initialization already completed or in progress.");
             return;

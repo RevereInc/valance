@@ -110,7 +110,9 @@ public class ClientContext {
                 ModuleManagerService.class,
                 ConfigManagerService.class,
                 CommandManagerService.class,
-                SkijaService.class
+                SkijaService.class,
+                DraggableManagerService.class,
+                KeybindService.class
         );
         System.out.println(LOG_PREFIX + "Discovered " + implementations.size() + " potential implementations.");
         return implementations;

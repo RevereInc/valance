@@ -2,12 +2,16 @@ package dev.revere.valance.module.api;
 
 import dev.revere.valance.ClientLoader;
 import dev.revere.valance.event.type.client.ModuleStateChangedEvent;
+import dev.revere.valance.input.BindType;
 import dev.revere.valance.module.Category;
 import dev.revere.valance.module.annotation.ModuleInfo;
 import dev.revere.valance.service.IEventBusService;
 import dev.revere.valance.settings.Setting;
 import dev.revere.valance.util.MinecraftUtil;
+import lombok.Getter;
+import lombok.Setter;
 import net.minecraft.client.Minecraft;
+import org.lwjgl.input.Keyboard;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -19,6 +23,8 @@ import java.util.List;
  * @project valance
  * @date 4/28/2025
  */
+@Getter
+@Setter
 public abstract class AbstractModule implements IModule {
     protected static final String LOG_PREFIX_MODULE = "[" + ClientLoader.CLIENT_NAME + ":Module] ";
 
@@ -31,9 +37,14 @@ public abstract class AbstractModule implements IModule {
 
     // --- Module Metadata & State ---
     private final String name;
+    private final String displayName;
     private final String description;
     private final Category category;
+    private final boolean hidden;
+
     private boolean enabled = false;
+    private int key = Keyboard.CHAR_NONE;
+    private BindType bindType = BindType.TOGGLE;
 
     /**
      * Constructor for dependency injection.
@@ -41,7 +52,7 @@ public abstract class AbstractModule implements IModule {
      *
      * @param eventBusService The injected Event Bus service instance.
      */
-    public AbstractModule(IEventBusService eventBusService /*, todo: other services */) {
+    public AbstractModule(IEventBusService eventBusService) {
         this.eventBusService = eventBusService;
 
         ModuleInfo info = getClass().getAnnotation(ModuleInfo.class);
@@ -49,8 +60,10 @@ public abstract class AbstractModule implements IModule {
             throw new IllegalStateException("Module class " + getClass().getSimpleName() + " is missing @ModuleInfo annotation!");
         }
         this.name = info.name();
+        this.displayName = info.displayName();
         this.description = info.description();
         this.category = info.category();
+        this.hidden = info.isHidden();
     }
 
     /**
@@ -73,13 +86,6 @@ public abstract class AbstractModule implements IModule {
         // System.out.println(LOG_PREFIX_MODULE + "[DEBUG] Listener unregistered for: " + getName());
     }
 
-    // --- Getters ---
-    @Override public final String getName() { return name; }
-    @Override public final String getDescription() { return description; }
-    @Override public final Category getCategory() { return category; }
-    @Override public final boolean isEnabled() { return enabled; }
-
-    // --- State Management ---
     @Override
     public final void setEnabled(boolean enabled) {
         if (this.enabled != enabled) {
@@ -118,6 +124,16 @@ public abstract class AbstractModule implements IModule {
     @Override
     public final void toggle() {
         setEnabled(!isEnabled());
+    }
+
+    /**
+     * Checks if the module is bound to a key.
+     *
+     * @return true if the module is bound, false otherwise.
+     */
+    @Override
+    public boolean isBound() {
+        return key != Keyboard.CHAR_NONE;
     }
 
     /**

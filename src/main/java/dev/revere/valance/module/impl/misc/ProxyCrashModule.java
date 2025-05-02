@@ -30,7 +30,7 @@ import java.util.UUID;
  * @project valance
  * @date 4/28/2025
  */
-@ModuleInfo(name = "ProxyCrash", description = "Advanced proxy exploitation toolkit", category = Category.MISC)
+@ModuleInfo(name = "ProxyCrash", displayName = "Proxy Crasher", description = "Advanced proxy exploitation toolkit", category = Category.MISC)
 public class ProxyCrashModule extends AbstractModule {
 
     private enum AttackMode {

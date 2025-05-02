@@ -11,7 +11,11 @@ import com.mojang.authlib.properties.PropertyMap;
 import com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService;
 import dev.revere.valance.ClientLoader;
 import dev.revere.valance.event.type.game.ClientTickEvent;
+import dev.revere.valance.event.type.input.KeyDownEvent;
+import dev.revere.valance.event.type.input.KeyUpEvent;
+import dev.revere.valance.module.impl.render.MotionBlurModule;
 import dev.revere.valance.service.IEventBusService;
+import dev.revere.valance.service.IModuleManager;
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraft.client.audio.MusicTicker;
@@ -135,7 +139,7 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
     public int displayWidth;
     public int displayHeight;
     private boolean connectedToRealms = false;
-    private Timer timer = new Timer(20.0F);
+    public Timer timer = new Timer(20.0F);
     private PlayerUsageSnooper usageSnooper = new PlayerUsageSnooper("client", this, MinecraftServer.getCurrentTimeMillis());
     public WorldClient theWorld;
     public RenderGlobal renderGlobal;
@@ -889,6 +893,21 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
     }
 
     public void updateDisplay() {
+        if (Minecraft.getMinecraft().thePlayer != null && Minecraft.getMinecraft().currentScreen == null) {
+            Optional<IModuleManager> mmOpt = ClientLoader.getService(IModuleManager.class);
+
+            if (mmOpt.isPresent()) {
+                IModuleManager moduleManager = mmOpt.get();
+                Optional<MotionBlurModule> mbOpt = moduleManager.getModule(MotionBlurModule.class);
+
+                if (mbOpt.isPresent()) {
+                    MotionBlurModule motionBlurModule = mbOpt.get();
+                    if (motionBlurModule.isEnabled()) {
+                        motionBlurModule.createAccumulation();
+                    }
+                }
+            }
+        }
         this.mcProfiler.startSection("display_update");
         Display.update();
         this.mcProfiler.endSection();
@@ -2340,6 +2359,18 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
         int i = Keyboard.getEventKey() == 0 ? Keyboard.getEventCharacter() : Keyboard.getEventKey();
 
         if (i != 0 && !Keyboard.isRepeatEvent()) {
+            boolean down = Keyboard.getEventKeyState();
+
+            Optional<IEventBusService> busOpt = ClientLoader.getService(IEventBusService.class);
+            if (busOpt.isPresent()) {
+                IEventBusService bus = busOpt.get();
+                if (down) {
+                    bus.post(new KeyDownEvent(i));
+                } else {
+                    bus.post(new KeyUpEvent(i));
+                }
+            }
+
             if (!(this.currentScreen instanceof GuiControls) || ((GuiControls) this.currentScreen).time <= getSystemTime() - 20L) {
                 if (Keyboard.getEventKeyState()) {
                     if (i == this.gameSettings.keyBindStreamStartStop.getKeyCode()) {

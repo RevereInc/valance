@@ -16,7 +16,12 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 public @interface ModuleInfo {
     String name();
+
+    String displayName();
+
     String description() default "";
+
     Category category();
-    boolean defaultEnabled() default false;
+
+    boolean isHidden() default false;
 }

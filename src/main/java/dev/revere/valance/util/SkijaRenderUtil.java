@@ -77,6 +77,146 @@ public final class SkijaRenderUtil {
         });
     }
 
+    /**
+     * Applies standard opacity (0-255) to a color integer.
+     * @param color The ARGB color integer.
+     * @param opacity The opacity value (0-255).
+     * @return The new ARGB color integer with the specified opacity.
+     */
+    public static int applyOpacity(int color, int opacity) {
+        opacity = Math.max(0, Math.min(255, opacity));
+        return (color & 0x00FFFFFF) | (opacity << 24);
+    }
+
+    /**
+     * Helper to draw a single colored segment with optional effects.
+     */
+    private static void drawSegment(Canvas canvas, Font font, String segment, float x, float y, Paint textPaint, Paint shadowPaint, Paint glowPaint) {
+        if (glowPaint != null) {
+            glowPaint.setColor(textPaint.getColor());
+            canvas.drawString(segment, x, y, font, glowPaint);
+        }
+        if (shadowPaint != null) {
+            canvas.drawString(segment, x + 1, y + 1f, font, shadowPaint);
+        }
+        canvas.drawString(segment, x, y, font, textPaint);
+    }
+
+    /**
+     * Draws a string potentially containing Minecraft § color codes with Skija.
+     * NOTE: This basic version only handles colors, not formatting like bold/italic.
+     * Effects (shadow, glow) apply to the entire string based on initial flags.
+     *
+     * @param canvas The Skija canvas to draw on (obtained via getCanvas() or passed).
+     * @param font   The font to use.
+     * @param text   The string containing potential color codes.
+     * @param x      Initial X position (pixels).
+     * @param y      Baseline Y position (pixels).
+     * @param defaultColor Default text color (ARGB integer).
+     * @param shadow Whether to apply a simple shadow.
+     * @param glow   Whether to apply a simple glow.
+     * @param shadowOpacity Opacity for the shadow (0-255).
+     */
+    public static void drawColoredString(Canvas canvas, Font font, String text, float x, float y, int defaultColor, boolean shadow, boolean glow, int shadowOpacity) {
+        if (text == null || text.isEmpty() || canvas == null || font == null) {
+            return;
+        }
+
+        float currentX = x;
+        int currentColor = defaultColor;
+
+        try (Paint textPaint = new Paint().setColor(currentColor).setAntiAlias(true);
+             Paint shadowPaint = shadow ? new Paint().setColor(applyOpacity(0x000000, shadowOpacity)).setAntiAlias(true) : null; // Black shadow base
+             Paint glowPaint = glow ? new Paint().setColor(currentColor).setMaskFilter(MaskFilter.makeBlur(FilterBlurMode.NORMAL, 2.0f, false)).setAntiAlias(true) : null
+        ) {
+
+            StringBuilder currentSegment = new StringBuilder();
+
+            for (int i = 0; i < text.length(); i++) {
+                char c = text.charAt(i);
+
+                if (c == ColorUtil.SECTION_SIGN && i + 1 < text.length()) {
+                    char formatCode = text.charAt(i + 1);
+                    int newColor = ColorUtil.getColor(formatCode, -1);
+
+                    if (newColor != -1) {
+                        if (currentSegment.length() > 0) {
+                            String segment = currentSegment.toString();
+                            drawSegment(canvas, font, segment, currentX, y, textPaint, shadowPaint, glowPaint);
+                            currentX += font.measureTextWidth(segment);
+                            currentSegment.setLength(0);
+                        }
+                        currentColor = newColor;
+                        textPaint.setColor(currentColor);
+                        i++;
+                        continue;
+                    } else if (ColorUtil.isResetCode(formatCode)) {
+                        if (currentSegment.length() > 0) {
+                            String segment = currentSegment.toString();
+                            drawSegment(canvas, font, segment, currentX, y, textPaint, shadowPaint, glowPaint);
+                            currentX += font.measureTextWidth(segment);
+                            currentSegment.setLength(0);
+                        }
+                        currentColor = ColorUtil.getDefaultColor();
+                        textPaint.setColor(currentColor);
+
+                        i++;
+                        continue;
+                    } else if (ColorUtil.isFormatCode(formatCode)) {
+                        i++;
+                        continue;
+                    }
+                }
+                currentSegment.append(c);
+            }
+
+            // Draw final segment
+            if (currentSegment.length() > 0) {
+                drawSegment(canvas, font, currentSegment.toString(), currentX, y, textPaint, shadowPaint, glowPaint);
+            }
+        } // Auto-close paints
+    }
+
+    /**
+     * Measures the rendered width of a string containing Minecraft color codes, ignoring the codes themselves.
+     *
+     * @param font The font used for rendering.
+     * @param text The string potentially containing color codes.
+     * @return The width in pixels that the string will occupy when drawn by drawColoredString.
+     */
+    public static float measureColoredStringWidth(Font font, String text) {
+        if (text == null || text.isEmpty() || font == null) {
+            return 0f;
+        }
+
+        float totalWidth = 0f;
+        StringBuilder currentSegment = new StringBuilder();
+
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+
+            if (c == ColorUtil.SECTION_SIGN && i + 1 < text.length()) {
+                char formatCode = text.charAt(i + 1);
+
+                if (ColorUtil.isColorCode(formatCode) || ColorUtil.isResetCode(formatCode) || ColorUtil.isFormatCode(formatCode)) {
+                    if (currentSegment.length() > 0) {
+                        totalWidth += font.measureTextWidth(currentSegment.toString());
+                        currentSegment.setLength(0);
+                    }
+                    i++;
+                    continue;
+                }
+            }
+            currentSegment.append(c);
+        }
+
+        if (currentSegment.length() > 0) {
+            totalWidth += font.measureTextWidth(currentSegment.toString());
+        }
+
+        return totalWidth;
+    }
+
     public static float getTextWidth(String text, float size) {
         Font font = new Font(Typeface.makeDefault(), size);
         return font.measureText(text).getWidth();

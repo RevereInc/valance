@@ -10,7 +10,9 @@ import java.util.Random;
 
 import dev.revere.valance.ClientLoader;
 import dev.revere.valance.event.type.render.Render2DEvent;
+import dev.revere.valance.module.impl.render.HotbarModule;
 import dev.revere.valance.service.IEventBusService;
+import dev.revere.valance.service.IModuleManager;
 import net.minecraft.block.material.Material;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GlStateManager;
@@ -139,7 +141,17 @@ public class GuiIngame extends Gui
         }
         else
         {
-            this.renderTooltip(scaledresolution, partialTicks);
+            Optional<IModuleManager> mmOpt = ClientLoader.getService(IModuleManager.class);
+            if (mmOpt.isPresent()) {
+                IModuleManager moduleManager = mmOpt.get();
+                Optional<HotbarModule> hmOpt = moduleManager.getModule(HotbarModule.class);
+                if (hmOpt.isPresent()) {
+                    HotbarModule hotbarModule = hmOpt.get();
+                    if (!hotbarModule.isEnabled()) {
+                        this.renderTooltip(scaledresolution, partialTicks);
+                    }
+                }
+            }
         }
 
         Render2DEvent renderEvent = new Render2DEvent(scaledresolution.getScaledWidth(), scaledresolution.getScaledHeight(), partialTicks);
@@ -1018,7 +1030,7 @@ public class GuiIngame extends Gui
         GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
     }
 
-    private void renderHotbarItem(int index, int xPos, int yPos, float partialTicks, EntityPlayer player)
+    public void renderHotbarItem(int index, int xPos, int yPos, float partialTicks, EntityPlayer player)
     {
         ItemStack itemstack = player.inventory.mainInventory[index];
 

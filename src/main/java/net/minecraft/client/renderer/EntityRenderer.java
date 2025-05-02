@@ -5,11 +5,12 @@ import com.google.common.base.Predicates;
 import com.google.gson.JsonSyntaxException;
 import java.io.IOException;
 import java.nio.FloatBuffer;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.Callable;
+
+import dev.revere.valance.ClientLoader;
+import dev.revere.valance.module.impl.render.NoHurtCamModule;
+import dev.revere.valance.service.IModuleManager;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockBed;
 import net.minecraft.block.material.Material;
@@ -605,6 +606,15 @@ public class EntityRenderer implements IResourceManagerReloadListener
 
     private void hurtCameraEffect(float partialTicks)
     {
+        Optional<IModuleManager> mmOpt = ClientLoader.getService(IModuleManager.class);
+        if (mmOpt.isPresent()) {
+            IModuleManager moduleManager = mmOpt.get();
+            Optional<NoHurtCamModule> nhcOpt = moduleManager.getModule(NoHurtCamModule.class);
+            if (nhcOpt.isPresent() && nhcOpt.get().isEnabled()) {
+                return;
+            }
+        }
+
         if (this.mc.getRenderViewEntity() instanceof EntityLivingBase)
         {
             EntityLivingBase entitylivingbase = (EntityLivingBase)this.mc.getRenderViewEntity();

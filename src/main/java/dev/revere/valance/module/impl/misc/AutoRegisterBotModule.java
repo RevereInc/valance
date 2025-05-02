@@ -32,7 +32,7 @@ import java.util.regex.Pattern;
  * @project valance
  * @date 4/28/2025
  */
-@ModuleInfo(name = "LegacyAutoRegisterBot", description = "Simplified bot system for Netty 4.0.x", category = Category.MISC)
+@ModuleInfo(name = "AutoRegisterBot", displayName = "Auto Register Bot", description = "Simplified bot system for Netty 4.0.x", category = Category.MISC)
 public class AutoRegisterBotModule extends AbstractModule {
 
     private static class BotConnection {
@@ -40,8 +40,6 @@ public class AutoRegisterBotModule extends AbstractModule {
         Channel channel;
         String code;
         int state = 0;
-        int messageCount = 0;
-        long lastAction = 0;
         boolean loggedIn = false;
 
         BotConnection(String username) {

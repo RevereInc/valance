@@ -9,14 +9,13 @@ import dev.revere.valance.core.lifecycle.IService;
 import dev.revere.valance.module.Category;
 import dev.revere.valance.module.annotation.ModuleInfo;
 import dev.revere.valance.module.api.IModule;
-import dev.revere.valance.module.impl.client.ClickGuiModule;
-import dev.revere.valance.module.impl.misc.AutoRegisterBotModule;
-import dev.revere.valance.module.impl.misc.InfoModule;
-import dev.revere.valance.module.impl.misc.NetworkStatsModule;
-import dev.revere.valance.module.impl.misc.ProxyCrashModule;
 import dev.revere.valance.service.IEventBusService;
 import dev.revere.valance.service.IModuleManager;
 import dev.revere.valance.util.ReflectionUtil;
+import org.reflections.Reflections;
+import org.reflections.scanners.Scanners;
+import org.reflections.util.ClasspathHelper;
+import org.reflections.util.ConfigurationBuilder;
 
 import java.lang.reflect.Constructor;
 import java.util.*;
@@ -65,15 +64,22 @@ public class ModuleManagerService implements IModuleManager {
 
     private void discoverAndRegisterModules() throws ServiceException {
         System.out.println(LOG_PREFIX + "Discovering and registering modules...");
-        List<Class<? extends IModule>> moduleClassesToRegister = List.of(
-                InfoModule.class,
-                NetworkStatsModule.class,
-                ProxyCrashModule.class,
-                AutoRegisterBotModule.class,
-                ClickGuiModule.class
+        Reflections reflections = new Reflections(new ConfigurationBuilder()
+                .setUrls(ClasspathHelper.forPackage("dev.revere.valance.module.impl"))
+                .setScanners(Scanners.SubTypes, Scanners.TypesAnnotated)
         );
 
-        for (Class<? extends IModule> moduleClass : moduleClassesToRegister) {
+        Set<Class<? extends IModule>> moduleClasses = reflections.getSubTypesOf(IModule.class);
+
+        if (moduleClasses.isEmpty()) {
+            System.out.println(LOG_PREFIX + "[WARN] No classes implementing IModule found in the package.");
+            return;
+        }
+
+        System.out.println(LOG_PREFIX + "Found " + moduleClasses.size() + " potential module classes.");
+
+
+        for (Class<? extends IModule> moduleClass : moduleClasses) {
             if (!IModule.class.isAssignableFrom(moduleClass) || moduleClass.isInterface() || java.lang.reflect.Modifier.isAbstract(moduleClass.getModifiers())) {
                 System.err.println(LOG_PREFIX + "[WARN] Skipping non-concrete IModule class: " + moduleClass.getName());
                 continue;
@@ -180,5 +186,15 @@ public class ModuleManagerService implements IModuleManager {
         return modulesByName.values().stream()
                 .filter(module -> module.getCategory() == category)
                 .collect(Collectors.toUnmodifiableList());
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T extends IModule> List<T> getModulesOfType(Class<T> type) {
+        return modulesByClass.values().stream()
+                .filter(Objects::nonNull)
+                .filter(type::isInstance)
+                .map(m -> (T) m)
+                .collect(Collectors.toList());
     }
 }

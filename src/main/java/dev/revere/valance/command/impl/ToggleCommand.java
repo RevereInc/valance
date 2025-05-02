@@ -13,7 +13,6 @@ import java.util.List;
  * @date 4/28/2025
  */
 public class ToggleCommand extends AbstractCommand {
-
     private final IModuleManager moduleManager;
 
     public ToggleCommand(IModuleManager moduleManager) {
@@ -25,6 +24,16 @@ public class ToggleCommand extends AbstractCommand {
     public void execute(String[] args) throws CommandException {
         if (args.length != 1) {
             sendUsage();
+            return;
+        }
+
+        if (args[0].equals("all")) {
+            moduleManager.getModules().forEach(module -> {
+                if (!module.getName().equals("HUD")) {
+                    module.toggle();
+                }
+            });
+            sendSuccess("All modules have been toggled.");
             return;
         }
 

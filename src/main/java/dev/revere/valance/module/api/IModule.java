@@ -12,7 +12,6 @@ import java.util.List;
  * @date 4/28/2025
  */
 public interface IModule extends Listener {
-
     /**
      * Base implementation registers the module with the EventBus.
      * Concrete modules can override to add specific setup AFTER calling super.onEnable().
@@ -27,15 +26,20 @@ public interface IModule extends Listener {
 
     /**
      * Returns the name of the module.
-     * This is typically set via the @ModuleInfo annotation.
      *
      * @return The name of the module.
      */
     String getName();
 
     /**
+     * Returns the display name of the module.
+     *
+     * @return The display name of the module.
+     */
+    String getDisplayName();
+
+    /**
      * Returns the description of the module.
-     * This is typically set via the @ModuleInfo annotation.
      *
      * @return The description of the module.
      */
@@ -43,7 +47,6 @@ public interface IModule extends Listener {
 
     /**
      * Returns the category of the module.
-     * This is typically set via the @ModuleInfo annotation.
      *
      * @return The category of the module.
      */
@@ -70,8 +73,21 @@ public interface IModule extends Listener {
     void toggle();
 
     /**
+     * Checks if the module is bound to a key.
+     *
+     * @return true if the module is bound, false otherwise.
+     */
+    boolean isBound();
+
+    /**
+     * Checks if the module is hidden.
+     *
+     * @return true if the module is hidden, false otherwise.
+     */
+    boolean isHidden();
+
+    /**
      * Returns the list of settings associated with this module.
-     * This is typically set via the @ModuleInfo annotation.
      *
      * @return The list of settings for the module.
      */
