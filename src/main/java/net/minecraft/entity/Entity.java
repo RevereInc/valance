@@ -1,9 +1,14 @@
 package net.minecraft.entity;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+
+import dev.revere.valance.ClientLoader;
+import dev.revere.valance.event.type.player.StrafeEvent;
+import dev.revere.valance.service.IEventBusService;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockFence;
 import net.minecraft.block.BlockFenceGate;
@@ -12,6 +17,7 @@ import net.minecraft.block.BlockWall;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.block.state.pattern.BlockPattern;
+import net.minecraft.client.Minecraft;
 import net.minecraft.command.CommandResultStats;
 import net.minecraft.command.ICommandSender;
 import net.minecraft.crash.CrashReport;
@@ -47,6 +53,8 @@ import net.minecraft.world.Explosion;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 
+import static dev.revere.valance.util.MinecraftUtil.mc;
+
 public abstract class Entity implements ICommandSender
 {
     private static final AxisAlignedBB ZERO_AABB = new AxisAlignedBB(0.0D, 0.0D, 0.0D, 0.0D, 0.0D, 0.0D);
@@ -77,7 +85,7 @@ public abstract class Entity implements ICommandSender
     public boolean isCollidedVertically;
     public boolean isCollided;
     public boolean velocityChanged;
-    protected boolean isInWeb;
+    public boolean isInWeb;
     private boolean isOutsideBorder;
     public boolean isDead;
     public float width;
@@ -123,6 +131,8 @@ public abstract class Entity implements ICommandSender
     private boolean invulnerable;
     protected UUID entityUniqueID;
     private final CommandResultStats cmdResultStats;
+
+    public int offGroundTicks, onGroundTicks;
 
     public int getEntityId()
     {
@@ -257,6 +267,15 @@ public abstract class Entity implements ICommandSender
 
     public void onUpdate()
     {
+        if (this.onGround) {
+            offGroundTicks = 0;
+            onGroundTicks++;
+        } else {
+            onGroundTicks = 0;
+            offGroundTicks++;
+        }
+
+
         this.onEntityUpdate();
     }
 
@@ -1009,6 +1028,26 @@ public abstract class Entity implements ICommandSender
 
     public void moveFlying(float strafe, float forward, float friction)
     {
+        boolean player = this == mc().thePlayer;
+        float yaw = this.rotationYaw;
+
+        if (player)
+        {
+            final StrafeEvent event = new StrafeEvent(forward, strafe, friction, yaw);
+
+            Optional<IEventBusService> busOpt = ClientLoader.getService(IEventBusService.class);
+            busOpt.ifPresent(iEventBusService -> iEventBusService.post(event));
+
+            if (event.isCancelled()) {
+                return;
+            }
+
+            forward = event.getForward();
+            strafe = event.getStrafe();
+            friction = event.getFriction();
+            yaw = event.getYaw();
+        }
+
         float f = strafe * strafe + forward * forward;
 
         if (f >= 1.0E-4F)
@@ -1023,8 +1062,8 @@ public abstract class Entity implements ICommandSender
             f = friction / f;
             strafe = strafe * f;
             forward = forward * f;
-            float f1 = MathHelper.sin(this.rotationYaw * (float)Math.PI / 180.0F);
-            float f2 = MathHelper.cos(this.rotationYaw * (float)Math.PI / 180.0F);
+            float f1 = MathHelper.sin(yaw * (float)Math.PI / 180.0F);
+            float f2 = MathHelper.cos(yaw * (float)Math.PI / 180.0F);
             this.motionX += (double)(strafe * f2 - forward * f1);
             this.motionZ += (double)(forward * f2 + strafe * f1);
         }

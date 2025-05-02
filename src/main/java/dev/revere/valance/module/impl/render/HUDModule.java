@@ -15,7 +15,7 @@ import dev.revere.valance.settings.type.ColorSetting;
 import dev.revere.valance.settings.type.EnumSetting;
 import dev.revere.valance.settings.type.NumberSetting;
 import dev.revere.valance.util.ColorUtil;
-import dev.revere.valance.util.SkijaRenderUtil;
+import dev.revere.valance.util.render.SkijaRenderUtil;
 import io.github.humbleui.skija.Canvas;
 import io.github.humbleui.skija.Font;
 import io.github.humbleui.skija.FontMetrics;

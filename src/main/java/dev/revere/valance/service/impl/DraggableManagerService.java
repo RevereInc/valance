@@ -8,8 +8,8 @@ import dev.revere.valance.core.exception.ServiceException;
 import dev.revere.valance.service.IConfigService;
 import dev.revere.valance.service.IDraggableService;
 import dev.revere.valance.ui.draggable.Draggable;
-import dev.revere.valance.util.Logger;
-import dev.revere.valance.util.SkijaRenderUtil;
+import dev.revere.valance.util.LoggerUtil;
+import dev.revere.valance.util.render.SkijaRenderUtil;
 import io.github.humbleui.skija.Canvas;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ScaledResolution;
@@ -50,7 +50,7 @@ public class DraggableManagerService implements IDraggableService {
     public void register(Draggable draggable) {
         if (draggable != null && !draggables.contains(draggable)) {
             draggables.add(draggable);
-            Logger.info(LOG_PREFIX, "Registered: " + draggable.getName());
+            LoggerUtil.info(LOG_PREFIX, "Registered: " + draggable.getName());
         }
     }
 

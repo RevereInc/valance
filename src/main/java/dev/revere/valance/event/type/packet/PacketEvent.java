@@ -11,6 +11,8 @@ import net.minecraft.network.Packet;
  * @project valance
  * @date 4/28/2025
  */
+@Getter
+@Setter
 public class PacketEvent implements IEvent, Cancellable {
     /**
      * Represents the direction or state of the packet event.
@@ -20,10 +22,8 @@ public class PacketEvent implements IEvent, Cancellable {
         RECEIVING
     }
 
-    @Getter
     private final EventState eventState;
 
-    @Setter
     private Packet<?> packet;
     private boolean cancelled = false;
 
@@ -58,15 +58,5 @@ public class PacketEvent implements IEvent, Cancellable {
      */
     public Packet<?> getRawPacket() {
         return packet;
-    }
-
-    @Override
-    public boolean isCancelled() {
-        return cancelled;
-    }
-
-    @Override
-    public void setCancelled(boolean cancel) {
-        this.cancelled = cancel;
     }
 }

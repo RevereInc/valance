@@ -204,6 +204,12 @@ public class RenderChunk
                 IBlockState iblockstate = chunkcacheof.getBlockState(blockposm);
                 Block block = iblockstate.getBlock();
 
+                // valance performance
+                if (block.getRenderType() == -1)
+                {
+                    continue;
+                }
+
                 if (block.isOpaqueCube())
                 {
                     lvt_10_1_.func_178606_a(blockposm);

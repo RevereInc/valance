@@ -11,14 +11,14 @@ import java.time.format.DateTimeFormatter;
  * @project valance
  * @date 5/2/2025
  */
-public class Logger {
+public class LoggerUtil {
     private static final boolean INCLUDE_TIMESTAMP = true;
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
     private static final String DEFAULT_CLIENT_PREFIX = "[" + ClientLoader.CLIENT_NAME + "]";
 
     private static final boolean ENABLE_DEBUG_LOGGING = false;
 
-    private Logger() {}
+    private LoggerUtil() {}
 
     public static void info(String prefix, String message) {
         log(System.out, "INFO", prefix, message, null);

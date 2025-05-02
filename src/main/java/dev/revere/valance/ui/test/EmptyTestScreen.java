@@ -2,7 +2,7 @@ package dev.revere.valance.ui.test;
 
 import dev.revere.valance.ClientLoader;
 import dev.revere.valance.service.ISkijaService;
-import dev.revere.valance.util.SkijaRenderUtil;
+import dev.revere.valance.util.render.SkijaRenderUtil;
 import io.github.humbleui.skija.*;
 import net.minecraft.client.gui.GuiScreen;
 import org.lwjgl.input.Keyboard;

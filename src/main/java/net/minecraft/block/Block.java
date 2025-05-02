@@ -1,12 +1,18 @@
 package net.minecraft.block;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
+
+import dev.revere.valance.ClientLoader;
+import dev.revere.valance.event.type.other.BlockAABBEvent;
+import dev.revere.valance.service.IEventBusService;
 import net.minecraft.block.material.MapColor;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.properties.IProperty;
 import net.minecraft.block.state.BlockState;
 import net.minecraft.block.state.IBlockState;
+import net.minecraft.client.Minecraft;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.Entity;
@@ -388,9 +394,20 @@ public class Block
     {
         AxisAlignedBB axisalignedbb = this.getCollisionBoundingBox(worldIn, pos, state);
 
-        if (axisalignedbb != null && mask.intersectsWith(axisalignedbb))
-        {
-            list.add(axisalignedbb);
+        if (collidingEntity == Minecraft.getMinecraft().thePlayer) {
+            final BlockAABBEvent event = new BlockAABBEvent(worldIn, this, pos, axisalignedbb, mask);
+            Optional<IEventBusService> busOpt = ClientLoader.getService(IEventBusService.class);
+            busOpt.ifPresent(iEventBusService -> iEventBusService.post(event));
+
+            if (event.isCancelled()) return;
+
+            if (event.getBoundingBox() != null && event.getMaskBoundingBox().intersectsWith(event.getBoundingBox())) {
+                list.add(event.getBoundingBox());
+            }
+        } else {
+            if (axisalignedbb != null && mask.intersectsWith(axisalignedbb)) {
+                list.add(axisalignedbb);
+            }
         }
     }
 

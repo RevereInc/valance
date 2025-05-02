@@ -1,7 +1,8 @@
-package dev.revere.valance.util;
+package dev.revere.valance.util.render;
 
 import dev.revere.valance.ClientLoader;
 import dev.revere.valance.service.ISkijaService;
+import dev.revere.valance.util.ColorUtil;
 import io.github.humbleui.skija.*;
 import io.github.humbleui.skija.paragraph.*;
 import io.github.humbleui.types.Point;

@@ -2,7 +2,7 @@ package dev.revere.valance.event;
 
 import dev.revere.valance.ClientLoader;
 import dev.revere.valance.event.annotation.Subscribe;
-import dev.revere.valance.util.Logger;
+import dev.revere.valance.util.LoggerUtil;
 import dev.revere.valance.util.ReflectionUtil;
 
 import java.lang.reflect.InvocationTargetException;
@@ -32,13 +32,13 @@ public class EventBus {
      */
     public void register(Listener listener) {
         if (listener == null) {
-            Logger.warn(LOG_PREFIX, "Attempted to register a null listener.");
+            LoggerUtil.warn(LOG_PREFIX, "Attempted to register a null listener.");
             return;
         }
 
         Method[] methods = ReflectionUtil.getAnnotatedMethods(listener.getClass(), Subscribe.class);
         if (methods.length == 0) {
-            Logger.debug(LOG_PREFIX, "No @Subscribe methods found in " + listener.getClass().getName());
+            LoggerUtil.debug(LOG_PREFIX, "No @Subscribe methods found in " + listener.getClass().getName());
             return;
         }
 
@@ -56,14 +56,14 @@ public class EventBus {
                         registeredAny = true;
                     }
                 } else {
-                    Logger.warn(LOG_PREFIX, "Method " + method + " in " + listener.getClass().getName() + " has @Subscribe but parameter is not an IEvent.");
+                    LoggerUtil.warn(LOG_PREFIX, "Method " + method + " in " + listener.getClass().getName() + " has @Subscribe but parameter is not an IEvent.");
                 }
             } else {
-                Logger.warn(LOG_PREFIX, "Method " + method + " in " + listener.getClass().getName() + " has @Subscribe but incorrect parameter count (must be 1).");
+                LoggerUtil.warn(LOG_PREFIX, "Method " + method + " in " + listener.getClass().getName() + " has @Subscribe but incorrect parameter count (must be 1).");
             }
         }
         if (registeredAny) {
-            Logger.info(LOG_PREFIX, "Registered listener: " + listener.getClass().getName());
+            LoggerUtil.info(LOG_PREFIX, "Registered listener: " + listener.getClass().getName());
         }
     }
 
@@ -74,7 +74,7 @@ public class EventBus {
      */
     public void unregister(Listener listener) {
         if (listener == null) {
-            Logger.warn(LOG_PREFIX, "Attempted to unregister a null listener.");
+            LoggerUtil.warn(LOG_PREFIX, "Attempted to unregister a null listener.");
             return;
         }
         final boolean[] removedAny = {false};
@@ -87,7 +87,7 @@ public class EventBus {
         // registry.entrySet().removeIf(entry -> entry.getValue().isEmpty());
 
         if (removedAny[0]) {
-            Logger.info(LOG_PREFIX, "Unregistered listener: " + listener.getClass().getName());
+            LoggerUtil.info(LOG_PREFIX, "Unregistered listener: " + listener.getClass().getName());
         }
     }
 
@@ -104,7 +104,7 @@ public class EventBus {
      */
     public <T extends IEvent> T post(T event) {
         if (event == null) {
-            Logger.warn(LOG_PREFIX, "Attempted to post a null event.");
+            LoggerUtil.warn(LOG_PREFIX, "Attempted to post a null event.");
             return null;
         }
 
@@ -124,13 +124,13 @@ public class EventBus {
                     }
                     listenerMethod.method.invoke(listenerMethod.instance, event);
                 } catch (IllegalAccessException e) {
-                    Logger.error(LOG_PREFIX, "Access Error invoking listener " + listenerMethod + " for event " + eventType.getSimpleName());
+                    LoggerUtil.error(LOG_PREFIX, "Access Error invoking listener " + listenerMethod + " for event " + eventType.getSimpleName());
                     e.printStackTrace();
                 } catch (InvocationTargetException e) {
-                    Logger.error(LOG_PREFIX, "Exception in listener " + listenerMethod.instance.getClass().getName() + "::" + listenerMethod.method.getName() + " for event " + eventType.getSimpleName());
+                    LoggerUtil.error(LOG_PREFIX, "Exception in listener " + listenerMethod.instance.getClass().getName() + "::" + listenerMethod.method.getName() + " for event " + eventType.getSimpleName());
                     e.getTargetException().printStackTrace();
                 } catch (Exception e) {
-                    Logger.error(LOG_PREFIX, "Unexpected Error invoking listener " + listenerMethod + " for event " + eventType.getSimpleName());
+                    LoggerUtil.error(LOG_PREFIX, "Unexpected Error invoking listener " + listenerMethod + " for event " + eventType.getSimpleName());
                     e.printStackTrace();
                 }
             }

@@ -7,7 +7,7 @@ import dev.revere.valance.module.Category;
 import dev.revere.valance.module.annotation.ModuleInfo;
 import dev.revere.valance.service.IEventBusService;
 import dev.revere.valance.settings.Setting;
-import dev.revere.valance.util.Logger;
+import dev.revere.valance.util.LoggerUtil;
 import dev.revere.valance.util.MinecraftUtil;
 import lombok.Getter;
 import lombok.Setter;
@@ -97,14 +97,14 @@ public abstract class AbstractModule implements IModule {
             try {
                 if (enabled) {
                     onEnable();
-                    Logger.info(LOG_PREFIX, "Enabled: " + getName());
+                    LoggerUtil.info(LOG_PREFIX, "Enabled: " + getName());
                 } else {
                     onDisable();
-                    Logger.info(LOG_PREFIX, "Disabled: " + getName());
+                    LoggerUtil.info(LOG_PREFIX, "Disabled: " + getName());
                 }
                 this.eventBusService.post(new ModuleStateChangedEvent(moduleInstance, enabled));
             } catch (Exception e) {
-                Logger.error(LOG_PREFIX, "Exception during state change for " + getName() + " to " + enabled + ":");
+                LoggerUtil.error(LOG_PREFIX, "Exception during state change for " + getName() + " to " + enabled + ":");
                 e.printStackTrace();
                 this.enabled = previousState;
 
@@ -115,7 +115,7 @@ public abstract class AbstractModule implements IModule {
                         onEnable();
                     }
                 } catch (Exception cleanupError) {
-                    Logger.error(LOG_PREFIX, "Further exception during state change cleanup for " + getName());
+                    LoggerUtil.error(LOG_PREFIX, "Further exception during state change cleanup for " + getName());
                     cleanupError.printStackTrace();
                 }
             }
@@ -151,7 +151,7 @@ public abstract class AbstractModule implements IModule {
     }
 
     private List<Setting<?>> findSettingsViaReflection() {
-        Logger.debug(LOG_PREFIX, "Discovering settings for: " + getName());
+        LoggerUtil.debug(LOG_PREFIX, "Discovering settings for: " + getName());
         List<Setting<?>> foundSettings = new ArrayList<>();
         Class<?> currentClass = this.getClass();
 
@@ -166,20 +166,20 @@ public abstract class AbstractModule implements IModule {
                             if(foundSettings.stream().noneMatch(s -> s.getName().equalsIgnoreCase(setting.getName()))){
                                 foundSettings.add(setting);
                             } else {
-                                Logger.warn(LOG_PREFIX, "Duplicate setting name '" + setting.getName() + "' found in " + getName() + ". Check field declarations.");
+                                LoggerUtil.warn(LOG_PREFIX, "Duplicate setting name '" + setting.getName() + "' found in " + getName() + ". Check field declarations.");
                             }
                         }
                     } catch (IllegalAccessException e) {
-                        Logger.error(LOG_PREFIX, "Failed to access setting field '" + field.getName() + "' in " + getName());
+                        LoggerUtil.error(LOG_PREFIX, "Failed to access setting field '" + field.getName() + "' in " + getName());
                         e.printStackTrace();
                     } catch (Exception e) {
-                        Logger.error(LOG_PREFIX, "Error accessing field '" + field.getName() + "' in " + getName() + ": " + e.getMessage());
+                        LoggerUtil.error(LOG_PREFIX, "Error accessing field '" + field.getName() + "' in " + getName() + ": " + e.getMessage());
                     }
                 }
             }
             currentClass = currentClass.getSuperclass();
         }
-        Logger.debug(LOG_PREFIX, "Found " + foundSettings.size() + " settings for: " + getName());
+        LoggerUtil.debug(LOG_PREFIX, "Found " + foundSettings.size() + " settings for: " + getName());
         return Collections.unmodifiableList(foundSettings);
     }
 

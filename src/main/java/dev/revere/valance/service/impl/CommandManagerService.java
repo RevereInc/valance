@@ -12,7 +12,7 @@ import dev.revere.valance.core.annotation.Service;
 import dev.revere.valance.core.exception.ServiceException;
 import dev.revere.valance.service.ICommandService;
 import dev.revere.valance.service.IModuleManager;
-import dev.revere.valance.util.Logger;
+import dev.revere.valance.util.LoggerUtil;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -34,30 +34,30 @@ public class CommandManagerService implements ICommandService {
 
     @Inject
     public CommandManagerService(IModuleManager moduleManager) {
-        Logger.info(LOG_PREFIX, "Constructed.");
+        LoggerUtil.info(LOG_PREFIX, "Constructed.");
         this.moduleManager = Objects.requireNonNull(moduleManager);
     }
 
     @Override
     public void initialize(ClientContext context) throws ServiceException {
-        Logger.info(LOG_PREFIX, "Initializing...");
+        LoggerUtil.info(LOG_PREFIX, "Initializing...");
         registerCommands();
-        Logger.info(LOG_PREFIX, "Initialized. Registered " + commandMap.size() + " command triggers.");
+        LoggerUtil.info(LOG_PREFIX, "Initialized. Registered " + commandMap.size() + " command triggers.");
     }
 
     private void registerCommands() {
-        Logger.info(LOG_PREFIX, "Registering commands...");
+        LoggerUtil.info(LOG_PREFIX, "Registering commands...");
         register(new HelpCommand(this));
         register(new ToggleCommand(moduleManager));
         register(new SettingCommand(moduleManager));
-        Logger.info(LOG_PREFIX, "Command registration complete.");
+        LoggerUtil.info(LOG_PREFIX, "Command registration complete.");
     }
 
     @Override
     public void shutdown(ClientContext context) throws ServiceException {
-        Logger.info(LOG_PREFIX, "Shutting down...");
+        LoggerUtil.info(LOG_PREFIX, "Shutting down...");
         commandMap.clear();
-        Logger.info(LOG_PREFIX, "Shutdown complete.");
+        LoggerUtil.info(LOG_PREFIX, "Shutdown complete.");
     }
 
     @Override
@@ -86,12 +86,12 @@ public class CommandManagerService implements ICommandService {
         String nameLower = command.getName().toLowerCase();
         ICommand removed = commandMap.remove(nameLower);
         if (removed != null) {
-            Logger.info(LOG_PREFIX, "Unregistered command trigger: " + nameLower);
+            LoggerUtil.info(LOG_PREFIX, "Unregistered command trigger: " + nameLower);
             for (String alias : command.getAliases()) {
                 String aliasLower = alias.toLowerCase();
                 if (commandMap.get(aliasLower) == command) {
                     commandMap.remove(aliasLower);
-                    Logger.info(LOG_PREFIX, "Unregistered command trigger: " + aliasLower);
+                    LoggerUtil.info(LOG_PREFIX, "Unregistered command trigger: " + aliasLower);
                 }
             }
         }
@@ -129,15 +129,15 @@ public class CommandManagerService implements ICommandService {
 
         if (commandOpt.isPresent()) {
             ICommand command = commandOpt.get();
-            Logger.info(LOG_PREFIX, "Executing command: " + command.getName() + " Args: " + Arrays.toString(args));
+            LoggerUtil.info(LOG_PREFIX, "Executing command: " + command.getName() + " Args: " + Arrays.toString(args));
             try {
                 command.execute(args);
             } catch (CommandException e) {
-                Logger.error(LOG_PREFIX, "Command error (" + command.getName() + "): " + e.getMessage());
+                LoggerUtil.error(LOG_PREFIX, "Command error (" + command.getName() + "): " + e.getMessage());
                 sendClientMessage("Error: " + e.getMessage(), true);
                 sendClientMessage("Usage: " + getPrefix() + command.getName() + " " + command.getUsage(), true);
             } catch (Throwable t) {
-                Logger.info(LOG_PREFIX, "[CRITICAL] Unexpected error executing command: " + command.getName());
+                LoggerUtil.info(LOG_PREFIX, "[CRITICAL] Unexpected error executing command: " + command.getName());
                 t.printStackTrace();
                 sendClientMessage("An internal error occurred while executing '" + command.getName() + "'. Check logs.", true);
             }

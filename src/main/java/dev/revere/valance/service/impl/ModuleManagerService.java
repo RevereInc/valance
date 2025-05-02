@@ -11,7 +11,7 @@ import dev.revere.valance.module.annotation.ModuleInfo;
 import dev.revere.valance.module.api.IModule;
 import dev.revere.valance.service.IEventBusService;
 import dev.revere.valance.service.IModuleManager;
-import dev.revere.valance.util.Logger;
+import dev.revere.valance.util.LoggerUtil;
 import dev.revere.valance.util.ReflectionUtil;
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ClassInfo;
@@ -45,31 +45,31 @@ public class ModuleManagerService implements IModuleManager {
 
     @Inject
     public ModuleManagerService(IEventBusService eventBusService) {
-        Logger.info(LOG_PREFIX, "Constructed.");
+        LoggerUtil.info(LOG_PREFIX, "Constructed.");
         this.eventBusService = Objects.requireNonNull(eventBusService, "EventBusService cannot be null");
     }
 
     @Override
     public void setup(ClientContext context) throws ServiceException {
-        Logger.info(LOG_PREFIX, "Setting up...");
+        LoggerUtil.info(LOG_PREFIX, "Setting up...");
         this.context = Objects.requireNonNull(context, "ClientContext cannot be null during ClientContext setup");
         discoverAndRegisterModules();
-        Logger.info(LOG_PREFIX, "Setup complete. Registered " + modulesByName.size() + " modules.");
+        LoggerUtil.info(LOG_PREFIX, "Setup complete. Registered " + modulesByName.size() + " modules.");
     }
 
     @Override
     public void initialize(ClientContext context) throws ServiceException {
-        Logger.info(LOG_PREFIX, "Initializing...");
+        LoggerUtil.info(LOG_PREFIX, "Initializing...");
         long enabledCount = getModules().stream().filter(IModule::isEnabled).count();
         long totalCount = getModules().size();
-        Logger.info(LOG_PREFIX, "Initialization complete. " + enabledCount + " of " + totalCount + " modules are currently enabled.");
+        LoggerUtil.info(LOG_PREFIX, "Initialization complete. " + enabledCount + " of " + totalCount + " modules are currently enabled.");
     }
 
     /**
      * Discovers and registers modules using ClassGraph for performance.
      */
     private void discoverAndRegisterModules() throws ServiceException {
-        Logger.info(LOG_PREFIX, "Discovering and registering modules via ClassGraph in package: " + MODULE_IMPL_PACKAGE + "...");
+        LoggerUtil.info(LOG_PREFIX, "Discovering and registering modules via ClassGraph in package: " + MODULE_IMPL_PACKAGE + "...");
         long startTimeNs = System.nanoTime();
         int potentialModuleCount = 0;
         int registeredModuleCount = 0;
@@ -90,7 +90,7 @@ public class ModuleManagerService implements IModuleManager {
                     );
 
             potentialModuleCount = moduleClassInfoList.size();
-            Logger.info(LOG_PREFIX, "Found " + potentialModuleCount + " potential module classes.");
+            LoggerUtil.info(LOG_PREFIX, "Found " + potentialModuleCount + " potential module classes.");
 
             for (ClassInfo moduleClassInfo : moduleClassInfoList) {
                 try {
@@ -99,7 +99,7 @@ public class ModuleManagerService implements IModuleManager {
 
                     ModuleInfo info = moduleClass.getAnnotation(ModuleInfo.class);
                     if (info == null) {
-                        Logger.warn(LOG_PREFIX, "Module class " + moduleClass.getSimpleName() + " missing @ModuleInfo despite passing filter. Skipping.");
+                        LoggerUtil.warn(LOG_PREFIX, "Module class " + moduleClass.getSimpleName() + " missing @ModuleInfo despite passing filter. Skipping.");
                         continue;
                     }
 
@@ -119,7 +119,7 @@ public class ModuleManagerService implements IModuleManager {
                     // --- Register Module ---
                     String moduleNameLower = moduleInstance.getName().toLowerCase();
                     if (modulesByName.containsKey(moduleNameLower) || modulesByClass.containsKey(moduleClass)) {
-                        Logger.warn(LOG_PREFIX, "Duplicate module name/class detected, skipping registration: " + moduleInstance.getName());
+                        LoggerUtil.warn(LOG_PREFIX, "Duplicate module name/class detected, skipping registration: " + moduleInstance.getName());
                     } else {
                         modulesByName.put(moduleNameLower, moduleInstance);
                         modulesByClass.put(moduleClass, moduleInstance);
@@ -127,17 +127,17 @@ public class ModuleManagerService implements IModuleManager {
                     }
 
                 } catch (Exception e) {
-                    Logger.error(LOG_PREFIX, "Failed to instantiate or register module " + moduleClassInfo.getName() + ".", e);
+                    LoggerUtil.error(LOG_PREFIX, "Failed to instantiate or register module " + moduleClassInfo.getName() + ".", e);
                     throw new ServiceException("Failed to process module: " + moduleClassInfo.getName(), e);
                 }
             }
         } catch (Exception e) {
-            Logger.error(LOG_PREFIX, "Error during ClassGraph scanning for modules.", e);
+            LoggerUtil.error(LOG_PREFIX, "Error during ClassGraph scanning for modules.", e);
             throw new ServiceException("Module discovery failed.", e);
         }
 
         long durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNs);
-        Logger.info(LOG_PREFIX, "Module registration complete (" + durationMs + "ms). Registered " + registeredModuleCount + "/" + potentialModuleCount + " modules.");
+        LoggerUtil.info(LOG_PREFIX, "Module registration complete (" + durationMs + "ms). Registered " + registeredModuleCount + "/" + potentialModuleCount + " modules.");
     }
 
     /**
@@ -174,7 +174,7 @@ public class ModuleManagerService implements IModuleManager {
 
     @Override
     public void shutdown(ClientContext context) throws ServiceException {
-        Logger.info(LOG_PREFIX, "Shutting down...");
+        LoggerUtil.info(LOG_PREFIX, "Shutting down...");
         final int[] disableCount = {0};
         getModules().stream()
                 .filter(IModule::isEnabled)
@@ -183,16 +183,16 @@ public class ModuleManagerService implements IModuleManager {
                         module.setEnabled(false);
                         disableCount[0]++;
                     } catch (Exception e) {
-                        Logger.error(LOG_PREFIX, "Error disabling module " + module.getName() + " during shutdown:", e);
+                        LoggerUtil.error(LOG_PREFIX, "Error disabling module " + module.getName() + " during shutdown:", e);
                     }
                 });
         if (disableCount[0] > 0) {
-            Logger.info(LOG_PREFIX, "Called setEnabled(false) on " + disableCount[0] + " previously active modules.");
+            LoggerUtil.info(LOG_PREFIX, "Called setEnabled(false) on " + disableCount[0] + " previously active modules.");
         }
 
         modulesByName.clear();
         modulesByClass.clear();
-        Logger.info(LOG_PREFIX, "Module registries cleared. Shutdown complete.");
+        LoggerUtil.info(LOG_PREFIX, "Module registries cleared. Shutdown complete.");
     }
 
     @Override

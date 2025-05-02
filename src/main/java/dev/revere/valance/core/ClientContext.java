@@ -5,7 +5,7 @@ import dev.revere.valance.core.annotation.Service;
 import dev.revere.valance.core.exception.ClientInitializationException;
 import dev.revere.valance.core.exception.ServiceException;
 import dev.revere.valance.core.lifecycle.IService;
-import dev.revere.valance.util.Logger;
+import dev.revere.valance.util.LoggerUtil;
 import dev.revere.valance.util.ReflectionUtil;
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ClassInfo;
@@ -47,7 +47,7 @@ public final class ClientContext {
      */
     public void initialize() throws ClientInitializationException {
         long startTimeNs = System.nanoTime();
-        Logger.info(LOG_PREFIX, "--- ClientContext Initialization Start ---");
+        LoggerUtil.info(LOG_PREFIX, "--- ClientContext Initialization Start ---");
 
         List<Map.Entry<Class<? extends IService>, Class<? extends IService>>> sortedServiceEntries = null;
 
@@ -55,8 +55,8 @@ public final class ClientContext {
             // --- 1. Service Discovery ---
             List<Class<? extends IService>> serviceImplClasses = discoverServiceImplementations();
             if (serviceImplClasses.isEmpty()) {
-                Logger.warn(LOG_PREFIX, "No service implementations found in package: " + SERVICE_IMPL_PACKAGE);
-                Logger.info(LOG_PREFIX, "--- ClientContext Initialization Complete (No Services) ---");
+                LoggerUtil.warn(LOG_PREFIX, "No service implementations found in package: " + SERVICE_IMPL_PACKAGE);
+                LoggerUtil.info(LOG_PREFIX, "--- ClientContext Initialization Complete (No Services) ---");
                 return;
             }
 
@@ -64,30 +64,30 @@ public final class ClientContext {
             this.serviceRegistry = mapAndValidateServices(serviceImplClasses);
             sortedServiceEntries = sortServicesByPriority(serviceRegistry);
 
-            Logger.info(LOG_PREFIX, "Service Initialization Order: " + formatServiceOrder(sortedServiceEntries));
+            LoggerUtil.info(LOG_PREFIX, "Service Initialization Order: " + formatServiceOrder(sortedServiceEntries));
 
             // --- 3. Instantiate Services (Handle constructor dependencies) ---
-            Logger.info(LOG_PREFIX, "--- Phase: Service Instantiation ---");
+            LoggerUtil.info(LOG_PREFIX, "--- Phase: Service Instantiation ---");
             for (Map.Entry<Class<? extends IService>, Class<? extends IService>> entry : sortedServiceEntries) {
                 getOrCreateServiceInstance(entry.getKey(), entry.getValue(), serviceRegistry);
             }
-            Logger.info(LOG_PREFIX, "--- Phase Complete: Service Instantiation ---");
+            LoggerUtil.info(LOG_PREFIX, "--- Phase Complete: Service Instantiation ---");
 
             // --- 4. Setup Services ---
-            Logger.info(LOG_PREFIX, "--- Phase: Service Setup ---");
+            LoggerUtil.info(LOG_PREFIX, "--- Phase: Service Setup ---");
             for (Map.Entry<Class<? extends IService>, Class<? extends IService>> entry : sortedServiceEntries) {
                 setupService(entry.getKey());
             }
-            Logger.info(LOG_PREFIX, "--- Phase Complete: Service Setup ---");
+            LoggerUtil.info(LOG_PREFIX, "--- Phase Complete: Service Setup ---");
 
             // --- 5. Initialize Services ---
-            Logger.info(LOG_PREFIX, "--- Phase: Service Initialization ---");
+            LoggerUtil.info(LOG_PREFIX, "--- Phase: Service Initialization ---");
             for (Map.Entry<Class<? extends IService>, Class<? extends IService>> entry : sortedServiceEntries) {
                 initializeService(entry.getKey());
             }
-            Logger.info(LOG_PREFIX, "--- Phase Complete: Service Initialization ---");
+            LoggerUtil.info(LOG_PREFIX, "--- Phase Complete: Service Initialization ---");
         } catch (Throwable t) {
-            Logger.error(LOG_PREFIX, "Unrecoverable error during ClientContext initialization.", t);
+            LoggerUtil.error(LOG_PREFIX, "Unrecoverable error during ClientContext initialization.", t);
 
             if (sortedServiceEntries != null) {
                 sortedServiceEntries.forEach(entry -> serviceStates.put(entry.getKey(), ServiceState.FAILED));
@@ -95,24 +95,24 @@ public final class ClientContext {
                 serviceRegistry.keySet().forEach(iface -> serviceStates.put(iface, ServiceState.FAILED));
             }
 
-            Logger.error(LOG_PREFIX, "Attempting emergency shutdown...");
+            LoggerUtil.error(LOG_PREFIX, "Attempting emergency shutdown...");
             try {
                 shutdownInternal(true);
             } catch (Throwable shutdownError) {
-                Logger.error(LOG_PREFIX, "Emergency shutdown failed.", shutdownError);
+                LoggerUtil.error(LOG_PREFIX, "Emergency shutdown failed.", shutdownError);
             }
             throw new ClientInitializationException("ClientContext initialization failed critically.", t);
         }
 
         long durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNs);
-        Logger.info(LOG_PREFIX, "--- ClientContext Initialization Success (" + durationMs + "ms) ---");
+        LoggerUtil.info(LOG_PREFIX, "--- ClientContext Initialization Success (" + durationMs + "ms) ---");
     }
 
     /**
      * Discovers service implementation classes using ClassGraph for better performance.
      */
     private List<Class<? extends IService>> discoverServiceImplementations() {
-        Logger.info(LOG_PREFIX, "Discovering service implementations via ClassGraph in package: " + SERVICE_IMPL_PACKAGE + "...");
+        LoggerUtil.info(LOG_PREFIX, "Discovering service implementations via ClassGraph in package: " + SERVICE_IMPL_PACKAGE + "...");
         List<Class<? extends IService>> serviceClasses = new ArrayList<>();
 
         try (ScanResult scanResult = new ClassGraph()
@@ -130,7 +130,7 @@ public final class ClientContext {
                                     !classInfo.isAbstract()
                     );
 
-            Logger.info(LOG_PREFIX, "Found " + serviceClassInfoList.size() + " potential concrete service classes with @Service annotation.");
+            LoggerUtil.info(LOG_PREFIX, "Found " + serviceClassInfoList.size() + " potential concrete service classes with @Service annotation.");
 
             for (ClassInfo classInfo : serviceClassInfoList) {
                 try {
@@ -138,20 +138,20 @@ public final class ClientContext {
                     Class<? extends IService> cls = (Class<? extends IService>) classInfo.loadClass();
                     serviceClasses.add(cls);
                 } catch (IllegalArgumentException | SecurityException | LinkageError e) {
-                    Logger.warn(LOG_PREFIX, "Could not load class: " + classInfo.getName() + " - " + e.getClass().getSimpleName() + ": " + e.getMessage());
+                    LoggerUtil.warn(LOG_PREFIX, "Could not load class: " + classInfo.getName() + " - " + e.getClass().getSimpleName() + ": " + e.getMessage());
                 } catch (Exception e) {
-                    Logger.warn(LOG_PREFIX, "Unexpected error loading class: " + classInfo.getName() + " - " + e.getMessage());
+                    LoggerUtil.warn(LOG_PREFIX, "Unexpected error loading class: " + classInfo.getName() + " - " + e.getMessage());
                 }
             }
         } catch (Exception e) {
-            Logger.error(LOG_PREFIX, "Error during ClassGraph scanning.", e);
+            LoggerUtil.error(LOG_PREFIX, "Error during ClassGraph scanning.", e);
             return Collections.emptyList();
         }
 
         if (serviceClasses.isEmpty()) {
-            Logger.warn(LOG_PREFIX, "No valid concrete classes annotated with @Service and implementing IService found in " + SERVICE_IMPL_PACKAGE);
+            LoggerUtil.warn(LOG_PREFIX, "No valid concrete classes annotated with @Service and implementing IService found in " + SERVICE_IMPL_PACKAGE);
         } else {
-            Logger.info(LOG_PREFIX, "Successfully loaded " + serviceClasses.size() + " service implementations.");
+            LoggerUtil.info(LOG_PREFIX, "Successfully loaded " + serviceClasses.size() + " service implementations.");
         }
         return serviceClasses;
     }
@@ -170,7 +170,7 @@ public final class ClientContext {
         for (Class<? extends IService> implClass : implementations) {
             Service serviceAnnotation = implClass.getAnnotation(Service.class);
             if (serviceAnnotation == null) {
-                Logger.warn(LOG_PREFIX, "Implementation " + implClass.getName() + " missing @Service annotation despite passing discovery filter. Skipping.");
+                LoggerUtil.warn(LOG_PREFIX, "Implementation " + implClass.getName() + " missing @Service annotation despite passing discovery filter. Skipping.");
                 continue;
             }
 
@@ -193,7 +193,7 @@ public final class ClientContext {
             registry.put(providedInterface, implClass);
             serviceStates.put(providedInterface, ServiceState.PENDING);
         }
-        Logger.info(LOG_PREFIX, "Validated and mapped " + registry.size() + " services.");
+        LoggerUtil.info(LOG_PREFIX, "Validated and mapped " + registry.size() + " services.");
         return Collections.unmodifiableMap(registry);
     }
 
@@ -215,7 +215,7 @@ public final class ClientContext {
     // TODO: implement topological sort for robust dependency handling.
     private List<Map.Entry<Class<? extends IService>, Class<? extends IService>>> sortServicesTopologically(
             Map<Class<? extends IService>, Class<? extends IService>> serviceMap) throws ServiceException {
-        Logger.warn(LOG_PREFIX, "Topological sort based on constructor dependencies is not yet implemented. Falling back to priority sort.");
+        LoggerUtil.warn(LOG_PREFIX, "Topological sort based on constructor dependencies is not yet implemented. Falling back to priority sort.");
         return sortServicesByPriority(serviceMap);
     }
 
@@ -262,7 +262,7 @@ public final class ClientContext {
         }
 
         serviceStates.put(serviceInterface, ServiceState.CONSTRUCTING);
-        Logger.info(LOG_PREFIX, "Constructing service: " + serviceInterface.getSimpleName() + " (" + serviceImplClass.getSimpleName() + ")");
+        LoggerUtil.info(LOG_PREFIX, "Constructing service: " + serviceInterface.getSimpleName() + " (" + serviceImplClass.getSimpleName() + ")");
 
         try {
             Constructor<?> constructor = ReflectionUtil.getServiceConstructor(serviceImplClass);
@@ -299,12 +299,12 @@ public final class ClientContext {
 
             serviceInstances.put(serviceInterface, newInstance);
             serviceStates.put(serviceInterface, ServiceState.CONSTRUCTED);
-            Logger.info(LOG_PREFIX, "Constructed service: " + serviceInterface.getSimpleName() + " successfully.");
+            LoggerUtil.info(LOG_PREFIX, "Constructed service: " + serviceInterface.getSimpleName() + " successfully.");
             return newInstance;
 
         } catch (Exception e) {
             serviceStates.put(serviceInterface, ServiceState.FAILED);
-            Logger.error(LOG_PREFIX, "Failed to construct service: " + serviceInterface.getName(), e);
+            LoggerUtil.error(LOG_PREFIX, "Failed to construct service: " + serviceInterface.getName(), e);
             throw new ServiceException("Construction failed for service " + serviceInterface.getName(), e);
         }
     }
@@ -321,7 +321,7 @@ public final class ClientContext {
         ServiceState state = serviceStates.get(serviceInterface);
 
         if (state == ServiceState.SETUP || state == ServiceState.INITIALIZING || state == ServiceState.INITIALIZED) {
-            Logger.debug(LOG_PREFIX, "Skipping setup for already processed service: " + serviceInterface.getSimpleName());
+            LoggerUtil.debug(LOG_PREFIX, "Skipping setup for already processed service: " + serviceInterface.getSimpleName());
             return;
         }
         if (state != ServiceState.CONSTRUCTED) {
@@ -329,14 +329,14 @@ public final class ClientContext {
                     " - unexpected state: " + state + ". Expected CONSTRUCTED.");
         }
 
-        Logger.info(LOG_PREFIX, "Setting up service: " + serviceInterface.getSimpleName());
+        LoggerUtil.info(LOG_PREFIX, "Setting up service: " + serviceInterface.getSimpleName());
         try {
             instance.setup(this); // Pass context
             serviceStates.put(serviceInterface, ServiceState.SETUP);
-            Logger.info(LOG_PREFIX, "Setup service: " + serviceInterface.getSimpleName() + " successfully.");
+            LoggerUtil.info(LOG_PREFIX, "Setup service: " + serviceInterface.getSimpleName() + " successfully.");
         } catch (Exception e) {
             serviceStates.put(serviceInterface, ServiceState.FAILED);
-            Logger.error(LOG_PREFIX, "Failed to setup service: " + serviceInterface.getSimpleName(), e);
+            LoggerUtil.error(LOG_PREFIX, "Failed to setup service: " + serviceInterface.getSimpleName(), e);
             throw new ServiceException("Setup failed for service " + serviceInterface.getName(), e);
         }
     }
@@ -353,7 +353,7 @@ public final class ClientContext {
         ServiceState state = serviceStates.get(serviceInterface);
 
         if (state == ServiceState.INITIALIZING || state == ServiceState.INITIALIZED) {
-            Logger.debug(LOG_PREFIX, "Skipping initialization for already processed service: " + serviceInterface.getSimpleName());
+            LoggerUtil.debug(LOG_PREFIX, "Skipping initialization for already processed service: " + serviceInterface.getSimpleName());
             return;
         }
         if (state != ServiceState.SETUP) {
@@ -362,14 +362,14 @@ public final class ClientContext {
         }
 
         serviceStates.put(serviceInterface, ServiceState.INITIALIZING);
-        Logger.info(LOG_PREFIX, "Initializing service: " + serviceInterface.getSimpleName());
+        LoggerUtil.info(LOG_PREFIX, "Initializing service: " + serviceInterface.getSimpleName());
         try {
             instance.initialize(this); // Pass context
             serviceStates.put(serviceInterface, ServiceState.INITIALIZED);
-            Logger.info(LOG_PREFIX, "Initialized service: " + serviceInterface.getSimpleName() + " successfully.");
+            LoggerUtil.info(LOG_PREFIX, "Initialized service: " + serviceInterface.getSimpleName() + " successfully.");
         } catch (Exception e) {
             serviceStates.put(serviceInterface, ServiceState.FAILED);
-            Logger.error(LOG_PREFIX, "Failed to initialize service: " + serviceInterface.getSimpleName(), e);
+            LoggerUtil.error(LOG_PREFIX, "Failed to initialize service: " + serviceInterface.getSimpleName(), e);
             throw new ServiceException("Initialization failed for service " + serviceInterface.getName(), e);
         }
     }
@@ -392,7 +392,7 @@ public final class ClientContext {
 
         IService instance = serviceInstances.get(serviceInterface);
         if (instance == null) {
-            Logger.debug(LOG_PREFIX, "Service instance not found in map for: " + serviceInterface.getSimpleName());
+            LoggerUtil.debug(LOG_PREFIX, "Service instance not found in map for: " + serviceInterface.getSimpleName());
             return Optional.empty();
         }
 
@@ -403,7 +403,7 @@ public final class ClientContext {
             T castInstance = (T) instance;
             return Optional.of(castInstance);
         } else {
-            Logger.debug(LOG_PREFIX, "Service " + serviceInterface.getSimpleName() + " requested but not in an injectable state (Current State: " + state + ")");
+            LoggerUtil.debug(LOG_PREFIX, "Service " + serviceInterface.getSimpleName() + " requested but not in an injectable state (Current State: " + state + ")");
             return Optional.empty();
         }
     }
@@ -425,17 +425,17 @@ public final class ClientContext {
      * @param emergency Indicates that this is an emergency shutdown.
      */
     private void shutdownInternal(boolean emergency) {
-        Logger.info(LOG_PREFIX, "--- ClientContext Shutdown Start " + (emergency ? "(Emergency)" : "") + " ---");
+        LoggerUtil.info(LOG_PREFIX, "--- ClientContext Shutdown Start " + (emergency ? "(Emergency)" : "") + " ---");
 
         boolean canSkipShutdown = !emergency && serviceStates.values().stream()
                 .allMatch(s -> s == ServiceState.SHUTDOWN || s == ServiceState.FAILED || s == ServiceState.PENDING);
 
         if (canSkipShutdown) {
-            Logger.info(LOG_PREFIX, "Shutdown requested, but services appear already shutdown, failed, or were never initialized.");
+            LoggerUtil.info(LOG_PREFIX, "Shutdown requested, but services appear already shutdown, failed, or were never initialized.");
             serviceInstances.clear();
             serviceStates.clear();
             serviceRegistry = Collections.emptyMap();
-            Logger.info(LOG_PREFIX, "--- ClientContext Shutdown Complete (Skipped) ---");
+            LoggerUtil.info(LOG_PREFIX, "--- ClientContext Shutdown Complete (Skipped) ---");
             return;
         }
 
@@ -448,7 +448,7 @@ public final class ClientContext {
                         .collect(Collectors.toList());
 
 
-        Logger.info(LOG_PREFIX, "Service shutdown order: " + formatServiceOrder(shutdownOrder));
+        LoggerUtil.info(LOG_PREFIX, "Service shutdown order: " + formatServiceOrder(shutdownOrder));
 
         for (Map.Entry<Class<? extends IService>, Class<? extends IService>> entry : shutdownOrder) {
             Class<? extends IService> iface = entry.getKey();
@@ -462,21 +462,21 @@ public final class ClientContext {
 
 
             if (instance != null && shouldAttemptShutdown) {
-                Logger.info(LOG_PREFIX, "Shutting down service: " + iface.getSimpleName() + " (State: " + currentState + ")");
+                LoggerUtil.info(LOG_PREFIX, "Shutting down service: " + iface.getSimpleName() + " (State: " + currentState + ")");
                 serviceStates.put(iface, ServiceState.SHUTTING_DOWN);
                 try {
                     instance.shutdown(this);
                     serviceStates.put(iface, ServiceState.SHUTDOWN);
-                    Logger.info(LOG_PREFIX, "Shutdown service: " + iface.getSimpleName() + " successfully.");
+                    LoggerUtil.info(LOG_PREFIX, "Shutdown service: " + iface.getSimpleName() + " successfully.");
                 } catch (Throwable t) {
                     serviceStates.put(iface, ServiceState.FAILED);
-                    Logger.error(LOG_PREFIX, "Error shutting down service " + iface.getName() + ": " + t.getMessage(), t);
+                    LoggerUtil.error(LOG_PREFIX, "Error shutting down service " + iface.getName() + ": " + t.getMessage(), t);
                 }
             } else {
                 if (instance == null && currentState != ServiceState.PENDING) {
-                    Logger.info(LOG_PREFIX, "Skipping shutdown for service: " + iface.getSimpleName() + " (Instance was null, State: " + currentState + ")");
+                    LoggerUtil.info(LOG_PREFIX, "Skipping shutdown for service: " + iface.getSimpleName() + " (Instance was null, State: " + currentState + ")");
                 } else {
-                    Logger.info(LOG_PREFIX, "Skipping shutdown for service: " + iface.getSimpleName() + " (Not in appropriate state for shutdown, State: " + currentState + ")");
+                    LoggerUtil.info(LOG_PREFIX, "Skipping shutdown for service: " + iface.getSimpleName() + " (Not in appropriate state for shutdown, State: " + currentState + ")");
                 }
 
                 if (currentState != ServiceState.FAILED && currentState != ServiceState.SHUTDOWN) {
@@ -488,7 +488,7 @@ public final class ClientContext {
         serviceInstances.clear();
         serviceStates.clear();
         serviceRegistry = Collections.emptyMap();
-        Logger.info(LOG_PREFIX, "--- ClientContext Shutdown Complete ---");
+        LoggerUtil.info(LOG_PREFIX, "--- ClientContext Shutdown Complete ---");
     }
 
     private String formatServiceOrder(List<Map.Entry<Class<? extends IService>, Class<? extends IService>>> services) {

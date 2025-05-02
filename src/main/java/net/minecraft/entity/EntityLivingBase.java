@@ -3,15 +3,16 @@ package net.minecraft.entity;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Maps;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.UUID;
+
+import java.util.*;
+
+import dev.revere.valance.ClientLoader;
+import dev.revere.valance.event.type.player.JumpEvent;
+import dev.revere.valance.service.IEventBusService;
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
+import net.minecraft.client.Minecraft;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.entity.ai.attributes.BaseAttributeMap;
@@ -1324,12 +1325,28 @@ public abstract class EntityLivingBase extends Entity
 
     protected void jump()
     {
-        this.motionY = (double)this.getJumpUpwardsMotion();
+        float jumpMotion = this.getJumpUpwardsMotion();
 
         if (this.isPotionActive(Potion.jump))
         {
-            this.motionY += (double)((float)(this.getActivePotionEffect(Potion.jump).getAmplifier() + 1) * 0.1F);
+            jumpMotion += (double)((float)(this.getActivePotionEffect(Potion.jump).getAmplifier() + 1) * 0.1F);
         }
+
+        if (this == Minecraft.getMinecraft().thePlayer) {
+            final JumpEvent event = new JumpEvent(jumpMotion, this.rotationYaw);
+
+            Optional<IEventBusService> busOpt = ClientLoader.getService(IEventBusService.class);
+            busOpt.ifPresent(iEventBusService -> iEventBusService.post(event));
+
+            jumpMotion = event.getJumpMotion();
+            this.rotationYaw = event.getYaw();
+
+            if (event.isCancelled()) {
+                return;
+            }
+        }
+
+        this.motionY = jumpMotion;
 
         if (this.isSprinting())
         {
