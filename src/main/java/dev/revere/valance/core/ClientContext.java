@@ -5,10 +5,14 @@ import dev.revere.valance.core.annotation.Service;
 import dev.revere.valance.core.exception.ClientInitializationException;
 import dev.revere.valance.core.exception.ServiceException;
 import dev.revere.valance.core.lifecycle.IService;
-import dev.revere.valance.service.impl.*;
 import dev.revere.valance.util.ReflectionUtil;
+import org.reflections.Reflections;
+import org.reflections.scanners.Scanners;
+import org.reflections.util.ClasspathHelper;
+import org.reflections.util.ConfigurationBuilder;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -103,19 +107,30 @@ public class ClientContext {
      * Discovers service implementation classes.
      */
     private List<Class<? extends IService>> discoverServiceImplementations() {
-        System.out.println(LOG_PREFIX + "Discovering service implementations...");
-        // !!! todo: Replace this with classpath scanning using a library (e.g., Reflections) !!!
-        List<Class<? extends IService>> implementations = List.of(
-                EventBusService.class,
-                ModuleManagerService.class,
-                ConfigManagerService.class,
-                CommandManagerService.class,
-                SkijaService.class,
-                DraggableManagerService.class,
-                KeybindService.class
+        System.out.println(LOG_PREFIX + "Discovering service implementations via reflection...");
+
+        Reflections reflections = new Reflections(new ConfigurationBuilder()
+                .setUrls(ClasspathHelper.forPackage("dev.revere.valance.service.impl"))
+                .setScanners(Scanners.TypesAnnotated)
         );
-        System.out.println(LOG_PREFIX + "Discovered " + implementations.size() + " potential implementations.");
-        return implementations;
+
+        Set<Class<?>> annotatedClasses = reflections.getTypesAnnotatedWith(Service.class);
+        List<Class<? extends IService>> serviceClasses = new ArrayList<>();
+
+        for (Class<?> cls : annotatedClasses) {
+            if (IService.class.isAssignableFrom(cls) && !cls.isInterface() && !Modifier.isAbstract(cls.getModifiers())) {
+                serviceClasses.add((Class<? extends IService>) cls);
+            } else {
+                System.err.println(LOG_PREFIX + "[WARN] Class " + cls.getName() + " has @Service annotation but does not implement IService or is abstract/interface. Skipping.");
+            }
+        }
+
+        if (serviceClasses.isEmpty()) {
+            System.out.println(LOG_PREFIX + "[WARN] No valid classes annotated with @Service found in " + "dev.revere.valance.service.impl");
+        } else {
+            System.out.println(LOG_PREFIX + "Discovered " + serviceClasses.size() + " potential service implementations via reflection.");
+        }
+        return serviceClasses;
     }
 
     /**
@@ -125,7 +140,7 @@ public class ClientContext {
         Map<Class<? extends IService>, Class<? extends IService>> registry = new HashMap<>();
 
         for (Class<? extends IService> implClass : implementations) {
-            if (implClass.isInterface() || java.lang.reflect.Modifier.isAbstract(implClass.getModifiers())) {
+            if (implClass.isInterface() || Modifier.isAbstract(implClass.getModifiers())) {
                 System.out.println(LOG_PREFIX + "[WARN] Skipping non-concrete service implementation: " + implClass.getName());
                 continue;
             }
@@ -318,7 +333,6 @@ public class ClientContext {
         }
         return Optional.empty();
     }
-
 
     /**
      * Shuts down all managed services gracefully.
