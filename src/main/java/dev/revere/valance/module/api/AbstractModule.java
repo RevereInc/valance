@@ -7,6 +7,7 @@ import dev.revere.valance.module.Category;
 import dev.revere.valance.module.annotation.ModuleInfo;
 import dev.revere.valance.service.IEventBusService;
 import dev.revere.valance.settings.Setting;
+import dev.revere.valance.util.Logger;
 import dev.revere.valance.util.MinecraftUtil;
 import lombok.Getter;
 import lombok.Setter;
@@ -26,7 +27,7 @@ import java.util.List;
 @Getter
 @Setter
 public abstract class AbstractModule implements IModule {
-    protected static final String LOG_PREFIX_MODULE = "[" + ClientLoader.CLIENT_NAME + ":Module] ";
+    protected static final String LOG_PREFIX = "[" + ClientLoader.CLIENT_NAME + ":Module]";
 
     public final Minecraft mc = Minecraft.getMinecraft();
 
@@ -96,14 +97,14 @@ public abstract class AbstractModule implements IModule {
             try {
                 if (enabled) {
                     onEnable();
-                    System.out.println(LOG_PREFIX_MODULE + "Enabled: " + getName());
+                    Logger.info(LOG_PREFIX, "Enabled: " + getName());
                 } else {
                     onDisable();
-                    System.out.println(LOG_PREFIX_MODULE + "Disabled: " + getName());
+                    Logger.info(LOG_PREFIX, "Disabled: " + getName());
                 }
                 this.eventBusService.post(new ModuleStateChangedEvent(moduleInstance, enabled));
             } catch (Exception e) {
-                System.err.println(LOG_PREFIX_MODULE + "[ERROR] Exception during state change for " + getName() + " to " + enabled + ":");
+                Logger.error(LOG_PREFIX, "Exception during state change for " + getName() + " to " + enabled + ":");
                 e.printStackTrace();
                 this.enabled = previousState;
 
@@ -114,7 +115,7 @@ public abstract class AbstractModule implements IModule {
                         onEnable();
                     }
                 } catch (Exception cleanupError) {
-                    System.err.println(LOG_PREFIX_MODULE + "[ERROR] Further exception during state change cleanup for " + getName());
+                    Logger.error(LOG_PREFIX, "Further exception during state change cleanup for " + getName());
                     cleanupError.printStackTrace();
                 }
             }
@@ -150,7 +151,7 @@ public abstract class AbstractModule implements IModule {
     }
 
     private List<Setting<?>> findSettingsViaReflection() {
-        System.out.println(LOG_PREFIX_MODULE + "[DEBUG] Discovering settings for: " + getName());
+        Logger.debug(LOG_PREFIX, "Discovering settings for: " + getName());
         List<Setting<?>> foundSettings = new ArrayList<>();
         Class<?> currentClass = this.getClass();
 
@@ -165,20 +166,20 @@ public abstract class AbstractModule implements IModule {
                             if(foundSettings.stream().noneMatch(s -> s.getName().equalsIgnoreCase(setting.getName()))){
                                 foundSettings.add(setting);
                             } else {
-                                System.err.println(LOG_PREFIX_MODULE + "[WARN] Duplicate setting name '" + setting.getName() + "' found in " + getName() + ". Check field declarations.");
+                                Logger.warn(LOG_PREFIX, "Duplicate setting name '" + setting.getName() + "' found in " + getName() + ". Check field declarations.");
                             }
                         }
                     } catch (IllegalAccessException e) {
-                        System.err.println(LOG_PREFIX_MODULE + "[ERROR] Failed to access setting field '" + field.getName() + "' in " + getName());
+                        Logger.error(LOG_PREFIX, "Failed to access setting field '" + field.getName() + "' in " + getName());
                         e.printStackTrace();
                     } catch (Exception e) {
-                        System.err.println(LOG_PREFIX_MODULE + "[ERROR] Error accessing field '" + field.getName() + "' in " + getName() + ": " + e.getMessage());
+                        Logger.error(LOG_PREFIX, "Error accessing field '" + field.getName() + "' in " + getName() + ": " + e.getMessage());
                     }
                 }
             }
             currentClass = currentClass.getSuperclass();
         }
-        System.out.println(LOG_PREFIX_MODULE + "[DEBUG] Found " + foundSettings.size() + " settings for: " + getName());
+        Logger.debug(LOG_PREFIX, "Found " + foundSettings.size() + " settings for: " + getName());
         return Collections.unmodifiableList(foundSettings);
     }
 

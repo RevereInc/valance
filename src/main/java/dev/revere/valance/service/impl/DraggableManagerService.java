@@ -1,5 +1,6 @@
 package dev.revere.valance.service.impl;
 
+import dev.revere.valance.ClientLoader;
 import dev.revere.valance.core.ClientContext;
 import dev.revere.valance.core.annotation.Inject;
 import dev.revere.valance.core.annotation.Service;
@@ -7,6 +8,7 @@ import dev.revere.valance.core.exception.ServiceException;
 import dev.revere.valance.service.IConfigService;
 import dev.revere.valance.service.IDraggableService;
 import dev.revere.valance.ui.draggable.Draggable;
+import dev.revere.valance.util.Logger;
 import dev.revere.valance.util.SkijaRenderUtil;
 import io.github.humbleui.skija.Canvas;
 import net.minecraft.client.Minecraft;
@@ -23,6 +25,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 @Service(provides = IDraggableService.class, priority = 40)
 public class DraggableManagerService implements IDraggableService {
+    private static final String LOG_PREFIX = "[" + ClientLoader.CLIENT_NAME + ":DraggableManager]";
 
     private final List<Draggable> draggables = new CopyOnWriteArrayList<>();
     private Draggable activeDragger = null;
@@ -47,7 +50,7 @@ public class DraggableManagerService implements IDraggableService {
     public void register(Draggable draggable) {
         if (draggable != null && !draggables.contains(draggable)) {
             draggables.add(draggable);
-            System.out.println("[DraggableService] Registered: " + draggable.getName());
+            Logger.info(LOG_PREFIX, "Registered: " + draggable.getName());
         }
     }
 

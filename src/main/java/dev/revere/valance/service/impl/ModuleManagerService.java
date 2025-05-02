@@ -11,15 +11,16 @@ import dev.revere.valance.module.annotation.ModuleInfo;
 import dev.revere.valance.module.api.IModule;
 import dev.revere.valance.service.IEventBusService;
 import dev.revere.valance.service.IModuleManager;
+import dev.revere.valance.util.Logger;
 import dev.revere.valance.util.ReflectionUtil;
-import org.reflections.Reflections;
-import org.reflections.scanners.Scanners;
-import org.reflections.util.ClasspathHelper;
-import org.reflections.util.ConfigurationBuilder;
+import io.github.classgraph.ClassGraph;
+import io.github.classgraph.ClassInfo;
+import io.github.classgraph.ScanResult;
 
 import java.lang.reflect.Constructor;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -29,11 +30,13 @@ import java.util.stream.Collectors;
  */
 @Service(provides = IModuleManager.class)
 public class ModuleManagerService implements IModuleManager {
-    private static final String LOG_PREFIX = "[" + ClientLoader.CLIENT_NAME + ":ModuleManager] ";
+    private static final String LOG_PREFIX = "[" + ClientLoader.CLIENT_NAME + ":ModuleManager]";
+
+    // --- Configuration ---
+    private static final String MODULE_IMPL_PACKAGE = "dev.revere.valance.module.impl";
 
     // --- Injected Dependencies ---
     private final IEventBusService eventBusService;
-
 
     // --- State ---
     private final Map<String, IModule> modulesByName = new ConcurrentHashMap<>();
@@ -41,111 +44,137 @@ public class ModuleManagerService implements IModuleManager {
     private ClientContext context;
 
     @Inject
-    public ModuleManagerService(IEventBusService eventBusService /*, IConfigService configService */) {
-        System.out.println(LOG_PREFIX + "Constructed.");
+    public ModuleManagerService(IEventBusService eventBusService) {
+        Logger.info(LOG_PREFIX, "Constructed.");
         this.eventBusService = Objects.requireNonNull(eventBusService, "EventBusService cannot be null");
     }
 
     @Override
     public void setup(ClientContext context) throws ServiceException {
-        System.out.println(LOG_PREFIX + "Setting up...");
-        this.context = Objects.requireNonNull(context, "ClientContext cannot be null during setup");
+        Logger.info(LOG_PREFIX, "Setting up...");
+        this.context = Objects.requireNonNull(context, "ClientContext cannot be null during ClientContext setup");
         discoverAndRegisterModules();
-        System.out.println(LOG_PREFIX + "Setup complete. Registered " + modulesByName.size() + " modules.");
+        Logger.info(LOG_PREFIX, "Setup complete. Registered " + modulesByName.size() + " modules.");
     }
 
     @Override
     public void initialize(ClientContext context) throws ServiceException {
-        System.out.println(LOG_PREFIX + "Initializing...");
+        Logger.info(LOG_PREFIX, "Initializing...");
         long enabledCount = getModules().stream().filter(IModule::isEnabled).count();
         long totalCount = getModules().size();
-        System.out.println(LOG_PREFIX + "Initialization complete. " + enabledCount + " of " + totalCount + " modules are enabled.");
+        Logger.info(LOG_PREFIX, "Initialization complete. " + enabledCount + " of " + totalCount + " modules are currently enabled.");
     }
 
+    /**
+     * Discovers and registers modules using ClassGraph for performance.
+     */
     private void discoverAndRegisterModules() throws ServiceException {
-        System.out.println(LOG_PREFIX + "Discovering and registering modules...");
-        Reflections reflections = new Reflections(new ConfigurationBuilder()
-                .setUrls(ClasspathHelper.forPackage("dev.revere.valance.module.impl"))
-                .setScanners(Scanners.SubTypes, Scanners.TypesAnnotated)
-        );
+        Logger.info(LOG_PREFIX, "Discovering and registering modules via ClassGraph in package: " + MODULE_IMPL_PACKAGE + "...");
+        long startTimeNs = System.nanoTime();
+        int potentialModuleCount = 0;
+        int registeredModuleCount = 0;
 
-        Set<Class<? extends IModule>> moduleClasses = reflections.getSubTypesOf(IModule.class);
+        try (ScanResult scanResult = new ClassGraph()
+                // .verbose()
+                .enableClassInfo()
+                .enableAnnotationInfo()
+                .acceptPackages(MODULE_IMPL_PACKAGE)
+                .scan()) {
 
-        if (moduleClasses.isEmpty()) {
-            System.out.println(LOG_PREFIX + "[WARN] No classes implementing IModule found in the package.");
-            return;
+            List<ClassInfo> moduleClassInfoList = scanResult
+                    .getClassesImplementing(IModule.class.getName())
+                    .filter(classInfo ->
+                            classInfo.hasAnnotation(ModuleInfo.class.getName()) &&
+                                    !classInfo.isInterface() &&
+                                    !classInfo.isAbstract()
+                    );
+
+            potentialModuleCount = moduleClassInfoList.size();
+            Logger.info(LOG_PREFIX, "Found " + potentialModuleCount + " potential module classes.");
+
+            for (ClassInfo moduleClassInfo : moduleClassInfoList) {
+                try {
+                    @SuppressWarnings("unchecked")
+                    Class<? extends IModule> moduleClass = (Class<? extends IModule>) moduleClassInfo.loadClass();
+
+                    ModuleInfo info = moduleClass.getAnnotation(ModuleInfo.class);
+                    if (info == null) {
+                        Logger.warn(LOG_PREFIX, "Module class " + moduleClass.getSimpleName() + " missing @ModuleInfo despite passing filter. Skipping.");
+                        continue;
+                    }
+
+                    // --- Instantiate Module with Dependency Injection ---
+                    Constructor<?> constructor = ReflectionUtil.getModuleConstructor(moduleClass);
+                    Class<?>[] paramTypes = constructor.getParameterTypes();
+                    Object[] args = new Object[paramTypes.length];
+
+                    // Resolve constructor dependencies (Services from ClientContext)
+                    for (int i = 0; i < paramTypes.length; i++) {
+                        args[i] = resolveModuleDependency(paramTypes[i], moduleClass);
+                    }
+
+                    // Instantiate
+                    IModule moduleInstance = (IModule) constructor.newInstance(args);
+
+                    // --- Register Module ---
+                    String moduleNameLower = moduleInstance.getName().toLowerCase();
+                    if (modulesByName.containsKey(moduleNameLower) || modulesByClass.containsKey(moduleClass)) {
+                        Logger.warn(LOG_PREFIX, "Duplicate module name/class detected, skipping registration: " + moduleInstance.getName());
+                    } else {
+                        modulesByName.put(moduleNameLower, moduleInstance);
+                        modulesByClass.put(moduleClass, moduleInstance);
+                        registeredModuleCount++;
+                    }
+
+                } catch (Exception e) {
+                    Logger.error(LOG_PREFIX, "Failed to instantiate or register module " + moduleClassInfo.getName() + ".", e);
+                    throw new ServiceException("Failed to process module: " + moduleClassInfo.getName(), e);
+                }
+            }
+        } catch (Exception e) {
+            Logger.error(LOG_PREFIX, "Error during ClassGraph scanning for modules.", e);
+            throw new ServiceException("Module discovery failed.", e);
         }
 
-        System.out.println(LOG_PREFIX + "Found " + moduleClasses.size() + " potential module classes.");
-
-
-        for (Class<? extends IModule> moduleClass : moduleClasses) {
-            if (!IModule.class.isAssignableFrom(moduleClass) || moduleClass.isInterface() || java.lang.reflect.Modifier.isAbstract(moduleClass.getModifiers())) {
-                System.err.println(LOG_PREFIX + "[WARN] Skipping non-concrete IModule class: " + moduleClass.getName());
-                continue;
-            }
-
-            ModuleInfo info = moduleClass.getAnnotation(ModuleInfo.class);
-            if (info == null) {
-                System.err.println(LOG_PREFIX + "[WARN] Module class " + moduleClass.getSimpleName() + " is missing @ModuleInfo annotation, skipping.");
-                continue;
-            }
-
-            try {
-                // --- Dependency Injection for Modules ---
-                Constructor<?> constructor = ReflectionUtil.getModuleConstructor(moduleClass);
-                Class<?>[] paramTypes = constructor.getParameterTypes();
-                Object[] args = new Object[paramTypes.length];
-
-                for (int i = 0; i < paramTypes.length; i++) {
-                    args[i] = resolveModuleDependency(paramTypes[i], moduleClass);
-                }
-
-                // Instantiate the module with resolved dependencies
-                IModule moduleInstance = (IModule) constructor.newInstance(args);
-
-                // Register the instantiated module
-                String moduleNameLower = moduleInstance.getName().toLowerCase();
-                if (modulesByName.containsKey(moduleNameLower) || modulesByClass.containsKey(moduleClass)) {
-                    System.err.println(LOG_PREFIX + "[WARN] Duplicate module name/class detected, skipping registration: " + moduleInstance.getName());
-                } else {
-                    modulesByName.put(moduleNameLower, moduleInstance);
-                    modulesByClass.put(moduleClass, moduleInstance);
-                    // System.out.println(LOG_PREFIX + "[DEBUG] Registered module: " + moduleInstance.getName());
-                }
-
-            } catch (Exception e) {
-                System.err.println(LOG_PREFIX + "[ERROR] Failed to instantiate or register module " + moduleClass.getSimpleName() + ".");
-                throw new ServiceException("Failed to process module: " + moduleClass.getSimpleName(), e);
-            }
-        }
-        System.out.println(LOG_PREFIX + "Module registration complete.");
+        long durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNs);
+        Logger.info(LOG_PREFIX, "Module registration complete (" + durationMs + "ms). Registered " + registeredModuleCount + "/" + potentialModuleCount + " modules.");
     }
 
     /**
      * Resolves a dependency required by a module's constructor.
-     * Currently, supports IService interfaces provided by the context.
+     * Relies on ClientContext.getService() which (as modified previously)
+     * can return services that are constructed but not fully initialized.
      *
      * @param dependencyType  The Class type of the dependency needed.
-     * @param requiringModule The Class of the module requesting the dependency (for logging).
+     * @param requiringModule The Class of the module requesting the dependency.
      * @return The resolved dependency instance.
      * @throws ServiceException if the dependency cannot be resolved.
      */
     private Object resolveModuleDependency(Class<?> dependencyType, Class<?> requiringModule) throws ServiceException {
+        if (this.context == null) {
+            throw new ServiceException("ClientContext is null within resolveModuleDependency. ModuleManagerService setup incomplete.");
+        }
+
         if (IService.class.isAssignableFrom(dependencyType) && dependencyType.isInterface()) {
             @SuppressWarnings("unchecked")
             Class<? extends IService> serviceInterface = (Class<? extends IService>) dependencyType;
 
             return context.getService(serviceInterface)
-                    .orElseThrow(() -> new ServiceException("Failed to inject required service dependency [" + serviceInterface.getSimpleName() + "] into module [" + requiringModule.getSimpleName() + "]. Ensure the service is registered and initialized before modules."));
+                    .orElseThrow(() -> new ServiceException(
+                            String.format("Failed to inject required service dependency [%s] into module [%s]. Service might not be constructed/registered or failed initialization.",
+                                    serviceInterface.getSimpleName(), requiringModule.getSimpleName())
+                    ));
         }
 
-        throw new ServiceException("Unsupported dependency type [" + dependencyType.getSimpleName() + "] requested by module [" + requiringModule.getSimpleName() + "]. Only IService interfaces are currently injectable.");
+        throw new ServiceException(
+                String.format("Unsupported dependency type [%s] requested by module [%s]. Only IService interfaces are currently injectable.",
+                        dependencyType.getSimpleName(), requiringModule.getSimpleName())
+        );
     }
 
     @Override
     public void shutdown(ClientContext context) throws ServiceException {
-        System.out.println(LOG_PREFIX + "Shutting down...");
+        Logger.info(LOG_PREFIX, "Shutting down...");
         final int[] disableCount = {0};
         getModules().stream()
                 .filter(IModule::isEnabled)
@@ -154,14 +183,16 @@ public class ModuleManagerService implements IModuleManager {
                         module.setEnabled(false);
                         disableCount[0]++;
                     } catch (Exception e) {
-                        System.err.println(LOG_PREFIX + "[ERROR] Error disabling module " + module.getName() + " during shutdown:");
-                        e.printStackTrace();
+                        Logger.error(LOG_PREFIX, "Error disabling module " + module.getName() + " during shutdown:", e);
                     }
                 });
-        System.out.println(LOG_PREFIX + "Disabled " + disableCount[0] + " active modules.");
+        if (disableCount[0] > 0) {
+            Logger.info(LOG_PREFIX, "Called setEnabled(false) on " + disableCount[0] + " previously active modules.");
+        }
+
         modulesByName.clear();
         modulesByClass.clear();
-        System.out.println(LOG_PREFIX + "Shutdown complete.");
+        Logger.info(LOG_PREFIX, "Module registries cleared. Shutdown complete.");
     }
 
     @Override
@@ -195,6 +226,6 @@ public class ModuleManagerService implements IModuleManager {
                 .filter(Objects::nonNull)
                 .filter(type::isInstance)
                 .map(m -> (T) m)
-                .collect(Collectors.toList());
+                .collect(Collectors.toUnmodifiableList());
     }
 }

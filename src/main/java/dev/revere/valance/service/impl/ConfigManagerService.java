@@ -14,6 +14,7 @@ import dev.revere.valance.module.api.IModule;
 import dev.revere.valance.service.IConfigService;
 import dev.revere.valance.service.IModuleManager;
 import dev.revere.valance.settings.Setting;
+import dev.revere.valance.util.Logger;
 import dev.revere.valance.util.MinecraftUtil;
 
 import java.io.IOException;
@@ -34,7 +35,7 @@ import java.util.stream.Stream;
  */
 @Service(provides = IConfigService.class, priority = 10)
 public class ConfigManagerService implements IConfigService {
-    private static final String LOG_PREFIX = "[" + ClientLoader.CLIENT_NAME + ":ConfigManager] ";
+    private static final String LOG_PREFIX = "[" + ClientLoader.CLIENT_NAME + ":ConfigManager]";
     private static final String CONFIG_DIR_NAME = ClientLoader.CLIENT_NAME + "/configs";
     private static final String CONFIG_FILE_EXTENSION = ".json";
     private static final String DEFAULT_PROFILE_NAME = "default";
@@ -46,7 +47,7 @@ public class ConfigManagerService implements IConfigService {
 
     @Inject
     public ConfigManagerService(IModuleManager moduleManager) {
-        System.out.println(LOG_PREFIX + "Constructed.");
+        Logger.info(LOG_PREFIX, "Constructed.");
         this.moduleManager = Objects.requireNonNull(moduleManager, "ModuleManager cannot be null");
         this.gson = createGsonInstance();
     }
@@ -62,64 +63,64 @@ public class ConfigManagerService implements IConfigService {
 
     @Override
     public void setup(ClientContext context) throws ServiceException {
-        System.out.println(LOG_PREFIX + "Setting up...");
+        Logger.info(LOG_PREFIX, "Setting up...");
         try {
             Path mcDir = MinecraftUtil.mc().mcDataDir.toPath();
             configDirectory = mcDir.resolve(CONFIG_DIR_NAME);
             if (!Files.exists(configDirectory)) {
                 Files.createDirectories(configDirectory);
-                System.out.println(LOG_PREFIX + "Created config directory: " + configDirectory);
+                Logger.info(LOG_PREFIX, "Created config directory: " + configDirectory);
             } else {
-                System.out.println(LOG_PREFIX + "Using config directory: " + configDirectory);
+                Logger.info(LOG_PREFIX, "Using config directory: " + configDirectory);
             }
         } catch (Exception e) {
-            System.err.println(LOG_PREFIX + "[ERROR] Failed to create or access config directory: " + configDirectory);
+            Logger.error(LOG_PREFIX, "Failed to create or access config directory: " + configDirectory);
             throw new ServiceException("Failed to initialize config directory", e);
         }
-        System.out.println(LOG_PREFIX + "Setup complete.");
+        Logger.info(LOG_PREFIX, "Setup complete.");
     }
 
     @Override
     public void initialize(ClientContext context) throws ServiceException {
-        System.out.println(LOG_PREFIX + "Initializing...");
+        Logger.info(LOG_PREFIX, "Initializing...");
         if (!loadConfig(DEFAULT_PROFILE_NAME)) {
-            System.out.println(LOG_PREFIX + "[WARN] Failed to load default config profile on startup. Defaults will be used.");
-            System.out.println(LOG_PREFIX + "Attempting to save initial default configuration...");
+            Logger.warn(LOG_PREFIX, "Failed to load default config profile on startup. Defaults will be used.");
+            Logger.info(LOG_PREFIX, "Attempting to save initial default configuration...");
             saveConfig(DEFAULT_PROFILE_NAME);
         } else {
-            System.out.println(LOG_PREFIX + "Successfully loaded profile: " + DEFAULT_PROFILE_NAME);
+            Logger.info(LOG_PREFIX, "Successfully loaded profile: " + DEFAULT_PROFILE_NAME);
         }
-        System.out.println(LOG_PREFIX + "Initialized.");
+        Logger.info(LOG_PREFIX, "Initialized.");
     }
 
     @Override
     public void shutdown(ClientContext context) throws ServiceException {
-        System.out.println(LOG_PREFIX + "Shutting down...");
+        Logger.info(LOG_PREFIX, "Shutting down...");
         if (!saveCurrentConfig()) {
-            System.err.println(LOG_PREFIX + "[ERROR] Failed to save current config profile '" + currentProfile + "' during shutdown!");
+            Logger.error(LOG_PREFIX, "Failed to save current config profile '" + currentProfile + "' during shutdown!");
         } else {
-            System.out.println(LOG_PREFIX + "Saved current profile '" + currentProfile + "' successfully.");
+            Logger.info(LOG_PREFIX, "Saved current profile '" + currentProfile + "' successfully.");
         }
-        System.out.println(LOG_PREFIX + "Shutdown complete.");
+        Logger.info(LOG_PREFIX, "Shutdown complete.");
     }
 
     @Override
     public boolean loadConfig(String profileName) {
         Path configFile = getConfigFile(profileName);
         if (!Files.exists(configFile)) {
-            System.out.println(LOG_PREFIX + "Config file not found: " + configFile.getFileName() + ". Using default module states and settings.");
+            Logger.info(LOG_PREFIX, "Config file not found: " + configFile.getFileName() + ". Using default module states and settings.");
             moduleManager.getModules().forEach(m -> m.getSettings().forEach(Setting::resetToDefault));
             return true;
         }
 
-        System.out.println(LOG_PREFIX + "Loading config from: " + configFile.getFileName());
+        Logger.info(LOG_PREFIX, "Loading config from: " + configFile.getFileName());
         Type configType = new TypeToken<Map<String, ModuleConfigData>>() {
         }.getType();
 
         try (Reader reader = Files.newBufferedReader(configFile, StandardCharsets.UTF_8)) {
             Map<String, ModuleConfigData> loadedData = gson.fromJson(reader, configType);
             if (loadedData == null || loadedData.isEmpty()) {
-                System.out.println(LOG_PREFIX + "[WARN] Loaded config file was empty or invalid: " + configFile.getFileName());
+                Logger.warn(LOG_PREFIX, "Loaded config file was empty or invalid: " + configFile.getFileName());
                 return false;
             }
 
@@ -128,22 +129,22 @@ public class ConfigManagerService implements IConfigService {
             return true;
 
         } catch (IOException e) {
-            System.err.println(LOG_PREFIX + "[ERROR] IOException while reading config file: " + configFile.getFileName());
+            Logger.error(LOG_PREFIX, "IOException while reading config file: " + configFile.getFileName());
             e.printStackTrace();
             return false;
         } catch (JsonSyntaxException e) {
-            System.err.println(LOG_PREFIX + "[ERROR] JSON Syntax error in config file: " + configFile.getFileName());
+            Logger.error(LOG_PREFIX, "JSON Syntax error in config file: " + configFile.getFileName());
             e.printStackTrace();
             return false;
         } catch (Exception e) {
-            System.err.println(LOG_PREFIX + "[ERROR] Unexpected error applying loaded config: " + configFile.getFileName());
+            Logger.error(LOG_PREFIX, "Unexpected error applying loaded config: " + configFile.getFileName());
             e.printStackTrace();
             return false;
         }
     }
 
     private void applyLoadedConfig(Map<String, ModuleConfigData> loadedData) {
-        System.out.println(LOG_PREFIX + "Applying loaded configuration data...");
+        Logger.info(LOG_PREFIX, "Applying loaded configuration data...");
         int modulesApplied = 0;
         int settingsApplied = 0;
 
@@ -158,7 +159,7 @@ public class ConfigManagerService implements IConfigService {
                     try {
                         module.setEnabled(moduleData.enabled);
                     } catch (Exception e) {
-                        System.err.println(LOG_PREFIX + "[ERROR] Failed to apply enabled state (" + moduleData.enabled + ") for module: " + moduleKey);
+                        Logger.error(LOG_PREFIX, "Failed to apply enabled state (" + moduleData.enabled + ") for module: " + moduleKey);
                         e.printStackTrace();
                     }
                 }
@@ -170,11 +171,11 @@ public class ConfigManagerService implements IConfigService {
                             if (setting.setValueFromObject(loadedValue)) {
                                 settingsApplied++;
                             } else {
-                                System.err.println(LOG_PREFIX + "[WARN] Failed to apply loaded value for setting '" + setting.getName() + "' in module '" + moduleKey + "'. Using default.");
+                                Logger.warn(LOG_PREFIX, "Failed to apply loaded value for setting '" + setting.getName() + "' in module '" + moduleKey + "'. Using default.");
                                 setting.resetToDefault();
                             }
                         } else {
-                            System.out.println(LOG_PREFIX + "[DEBUG] Setting '" + setting.getName() + "' not found in config for module '" + moduleKey + "'. Resetting to default.");
+                            Logger.info(LOG_PREFIX, "[DEBUG] Setting '" + setting.getName() + "' not found in config for module '" + moduleKey + "'. Resetting to default.");
                             setting.resetToDefault();
                         }
                     }
@@ -185,7 +186,7 @@ public class ConfigManagerService implements IConfigService {
                 modulesInConfig.remove(moduleKey);
 
             } else {
-                System.out.println(LOG_PREFIX + "[DEBUG] Module '" + moduleKey + "' not found in config. Disabling and resetting settings.");
+                Logger.info(LOG_PREFIX, "[DEBUG] Module '" + moduleKey + "' not found in config. Disabling and resetting settings.");
                 if (module.isEnabled()) {
                     try {
                         module.setEnabled(false);
@@ -197,15 +198,15 @@ public class ConfigManagerService implements IConfigService {
         }
 
         if (!modulesInConfig.isEmpty()) {
-            System.out.println(LOG_PREFIX + "[WARN] Config contained data for modules not currently loaded: " + modulesInConfig);
+            Logger.warn(LOG_PREFIX, "Config contained data for modules not currently loaded: " + modulesInConfig);
         }
-        System.out.println(LOG_PREFIX + "Applied configuration for " + modulesApplied + " modules and " + settingsApplied + " settings.");
+        Logger.info(LOG_PREFIX, "Applied configuration for " + modulesApplied + " modules and " + settingsApplied + " settings.");
     }
 
     @Override
     public boolean saveConfig(String profileName) {
         Path configFile = getConfigFile(profileName);
-        System.out.println(LOG_PREFIX + "Saving config to: " + configFile.getFileName());
+        Logger.info(LOG_PREFIX, "Saving config to: " + configFile.getFileName());
 
         Map<String, ModuleConfigData> configData = buildConfigData();
 
@@ -213,15 +214,15 @@ public class ConfigManagerService implements IConfigService {
             gson.toJson(configData, writer);
             return true;
         } catch (IOException e) {
-            System.err.println(LOG_PREFIX + "[ERROR] IOException while writing config file: " + configFile.getFileName());
+            Logger.error(LOG_PREFIX, "IOException while writing config file: " + configFile.getFileName());
             e.printStackTrace();
             return false;
         } catch (JsonIOException e) {
-            System.err.println(LOG_PREFIX + "[ERROR] Gson IO error while writing config file: " + configFile.getFileName());
+            Logger.error(LOG_PREFIX, "Gson IO error while writing config file: " + configFile.getFileName());
             e.printStackTrace();
             return false;
         } catch (Exception e) {
-            System.err.println(LOG_PREFIX + "[ERROR] Unexpected error saving config: " + configFile.getFileName());
+            Logger.error(LOG_PREFIX, "Unexpected error saving config: " + configFile.getFileName());
             e.printStackTrace();
             return false;
         }
@@ -262,21 +263,21 @@ public class ConfigManagerService implements IConfigService {
     @Override
     public void setCurrentProfile(String profileName) {
         if (profileName == null || profileName.trim().isEmpty()) {
-            System.err.println(LOG_PREFIX + "[WARN] Attempted to set null or empty profile name. Using default.");
+            Logger.warn(LOG_PREFIX, "Attempted to set null or empty profile name. Using default.");
             profileName = DEFAULT_PROFILE_NAME;
         }
         if (!profileName.matches("^[a-zA-Z0-9_-]+$")) {
-            System.err.println(LOG_PREFIX + "[ERROR] Invalid profile name: '" + profileName + "'. Use alphanumeric, underscore, or hyphen.");
+            Logger.error(LOG_PREFIX, "Invalid profile name: '" + profileName + "'. Use alphanumeric, underscore, or hyphen.");
             return;
         }
 
         if (!this.currentProfile.equals(profileName)) {
-            System.out.println(LOG_PREFIX + "Switching active profile to: " + profileName);
+            Logger.info(LOG_PREFIX, "Switching active profile to: " + profileName);
             // saveCurrentConfig();
             if (loadConfig(profileName)) {
-                System.out.println(LOG_PREFIX + "Successfully loaded profile: " + profileName);
+                Logger.info(LOG_PREFIX, "Successfully loaded profile: " + profileName);
             } else {
-                System.err.println(LOG_PREFIX + "[ERROR] Failed to load profile '" + profileName + "' during switch. Reverting to '" + this.currentProfile + "'.");
+                Logger.error(LOG_PREFIX, "Failed to load profile '" + profileName + "' during switch. Reverting to '" + this.currentProfile + "'.");
                 loadConfig(this.currentProfile);
             }
         }
@@ -297,7 +298,7 @@ public class ConfigManagerService implements IConfigService {
                     .sorted()
                     .collect(Collectors.toList());
         } catch (IOException e) {
-            System.err.println(LOG_PREFIX + "[ERROR] Failed to list config profiles in: " + configDirectory);
+            Logger.error(LOG_PREFIX, "Failed to list config profiles in: " + configDirectory);
             e.printStackTrace();
             return Collections.emptyList();
         }
@@ -306,11 +307,11 @@ public class ConfigManagerService implements IConfigService {
     @Override
     public boolean deleteProfile(String profileName) {
         if (DEFAULT_PROFILE_NAME.equalsIgnoreCase(profileName)) {
-            System.err.println(LOG_PREFIX + "[ERROR] Cannot delete the default profile.");
+            Logger.error(LOG_PREFIX, "Cannot delete the default profile.");
             return false;
         }
         if (currentProfile.equalsIgnoreCase(profileName)) {
-            System.err.println(LOG_PREFIX + "[ERROR] Cannot delete the currently active profile. Switch profiles first.");
+            Logger.error(LOG_PREFIX, "Cannot delete the currently active profile. Switch profiles first.");
             return false;
         }
 
@@ -318,14 +319,14 @@ public class ConfigManagerService implements IConfigService {
         try {
             boolean deleted = Files.deleteIfExists(configFile);
             if (deleted) {
-                System.out.println(LOG_PREFIX + "Deleted profile: " + profileName);
+                Logger.info(LOG_PREFIX, "Deleted profile: " + profileName);
                 return true;
             } else {
-                System.out.println(LOG_PREFIX + "[WARN] Profile not found for deletion: " + profileName);
+                Logger.warn(LOG_PREFIX, "Profile not found for deletion: " + profileName);
                 return false;
             }
         } catch (IOException | SecurityException e) {
-            System.err.println(LOG_PREFIX + "[ERROR] Failed to delete profile file: " + configFile.getFileName());
+            Logger.error(LOG_PREFIX, "Failed to delete profile file: " + configFile.getFileName());
             e.printStackTrace();
             return false;
         }

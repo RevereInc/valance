@@ -14,6 +14,7 @@ import dev.revere.valance.module.api.AbstractModule;
 import dev.revere.valance.service.IEventBusService;
 import dev.revere.valance.service.IKeybindService;
 import dev.revere.valance.service.IModuleManager;
+import dev.revere.valance.util.Logger;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiScreen;
 import org.lwjgl.input.Keyboard;
@@ -28,7 +29,7 @@ import java.util.Objects;
  */
 @Service(provides = IKeybindService.class, priority = 300)
 public class KeybindService implements IKeybindService, Listener {
-    private static final String LOG_PREFIX = "[" + ClientLoader.CLIENT_NAME + ":KeybindService] ";
+    private static final String LOG_PREFIX = "[" + ClientLoader.CLIENT_NAME + ":KeybindService]";
 
     private final IModuleManager moduleManager;
     private final IEventBusService eventBusService;
@@ -37,7 +38,7 @@ public class KeybindService implements IKeybindService, Listener {
     public KeybindService(IModuleManager moduleManager, IEventBusService eventBusService) {
         this.moduleManager = Objects.requireNonNull(moduleManager, "ModuleManager cannot be null");
         this.eventBusService = Objects.requireNonNull(eventBusService, "EventBusService cannot be null");
-        System.out.println(LOG_PREFIX + "Constructed.");
+        Logger.info(LOG_PREFIX, "Constructed.");
     }
 
     @Override

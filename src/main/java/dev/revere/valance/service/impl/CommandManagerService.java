@@ -12,6 +12,7 @@ import dev.revere.valance.core.annotation.Service;
 import dev.revere.valance.core.exception.ServiceException;
 import dev.revere.valance.service.ICommandService;
 import dev.revere.valance.service.IModuleManager;
+import dev.revere.valance.util.Logger;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,7 +26,7 @@ import static dev.revere.valance.util.MinecraftUtil.sendClientMessage;
  */
 @Service(provides = ICommandService.class, priority = 50)
 public class CommandManagerService implements ICommandService {
-    private static final String LOG_PREFIX = "[" + ClientLoader.CLIENT_NAME + ":CommandManager] ";
+    private static final String LOG_PREFIX = "[" + ClientLoader.CLIENT_NAME + ":CommandManager]";
 
     private final IModuleManager moduleManager;
 
@@ -33,30 +34,30 @@ public class CommandManagerService implements ICommandService {
 
     @Inject
     public CommandManagerService(IModuleManager moduleManager) {
-        System.out.println(LOG_PREFIX + "Constructed.");
+        Logger.info(LOG_PREFIX, "Constructed.");
         this.moduleManager = Objects.requireNonNull(moduleManager);
     }
 
     @Override
     public void initialize(ClientContext context) throws ServiceException {
-        System.out.println(LOG_PREFIX + "Initializing...");
+        Logger.info(LOG_PREFIX, "Initializing...");
         registerCommands();
-        System.out.println(LOG_PREFIX + "Initialized. Registered " + commandMap.size() + " command triggers.");
+        Logger.info(LOG_PREFIX, "Initialized. Registered " + commandMap.size() + " command triggers.");
     }
 
     private void registerCommands() {
-        System.out.println(LOG_PREFIX + "Registering commands...");
+        Logger.info(LOG_PREFIX, "Registering commands...");
         register(new HelpCommand(this));
         register(new ToggleCommand(moduleManager));
         register(new SettingCommand(moduleManager));
-        System.out.println(LOG_PREFIX + "Command registration complete.");
+        Logger.info(LOG_PREFIX, "Command registration complete.");
     }
 
     @Override
     public void shutdown(ClientContext context) throws ServiceException {
-        System.out.println(LOG_PREFIX + "Shutting down...");
+        Logger.info(LOG_PREFIX, "Shutting down...");
         commandMap.clear();
-        System.out.println(LOG_PREFIX + "Shutdown complete.");
+        Logger.info(LOG_PREFIX, "Shutdown complete.");
     }
 
     @Override
@@ -85,12 +86,12 @@ public class CommandManagerService implements ICommandService {
         String nameLower = command.getName().toLowerCase();
         ICommand removed = commandMap.remove(nameLower);
         if (removed != null) {
-            System.out.println(LOG_PREFIX + "Unregistered command trigger: " + nameLower);
+            Logger.info(LOG_PREFIX, "Unregistered command trigger: " + nameLower);
             for (String alias : command.getAliases()) {
                 String aliasLower = alias.toLowerCase();
                 if (commandMap.get(aliasLower) == command) {
                     commandMap.remove(aliasLower);
-                    System.out.println(LOG_PREFIX + "Unregistered command trigger: " + aliasLower);
+                    Logger.info(LOG_PREFIX, "Unregistered command trigger: " + aliasLower);
                 }
             }
         }
@@ -128,15 +129,15 @@ public class CommandManagerService implements ICommandService {
 
         if (commandOpt.isPresent()) {
             ICommand command = commandOpt.get();
-            System.out.println(LOG_PREFIX + "Executing command: " + command.getName() + " Args: " + Arrays.toString(args));
+            Logger.info(LOG_PREFIX, "Executing command: " + command.getName() + " Args: " + Arrays.toString(args));
             try {
                 command.execute(args);
             } catch (CommandException e) {
-                System.err.println(LOG_PREFIX + "[ERROR] Command error (" + command.getName() + "): " + e.getMessage());
+                Logger.error(LOG_PREFIX, "Command error (" + command.getName() + "): " + e.getMessage());
                 sendClientMessage("Error: " + e.getMessage(), true);
                 sendClientMessage("Usage: " + getPrefix() + command.getName() + " " + command.getUsage(), true);
             } catch (Throwable t) {
-                System.err.println(LOG_PREFIX + "[CRITICAL] Unexpected error executing command: " + command.getName());
+                Logger.info(LOG_PREFIX, "[CRITICAL] Unexpected error executing command: " + command.getName());
                 t.printStackTrace();
                 sendClientMessage("An internal error occurred while executing '" + command.getName() + "'. Check logs.", true);
             }

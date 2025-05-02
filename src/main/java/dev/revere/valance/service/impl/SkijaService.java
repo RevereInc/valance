@@ -5,6 +5,7 @@ import dev.revere.valance.core.ClientContext;
 import dev.revere.valance.core.annotation.Service;
 import dev.revere.valance.core.exception.ServiceException;
 import dev.revere.valance.service.ISkijaService;
+import dev.revere.valance.util.Logger;
 import dev.revere.valance.util.MinecraftUtil;
 import dev.revere.valance.util.render.UIState;
 import io.github.humbleui.skija.*;
@@ -16,7 +17,7 @@ import org.lwjgl.opengl.GL11;
 
 @Service(provides = ISkijaService.class, priority = 100)
 public class SkijaService implements ISkijaService {
-    private static final String LOG_PREFIX = "[" + ClientLoader.CLIENT_NAME + ":SkijaService] ";
+    private static final String LOG_PREFIX = "[" + ClientLoader.CLIENT_NAME + ":SkijaService]";
 
     private DirectContext skijaContext = null;
     private Surface skijaSurface = null;
@@ -28,52 +29,52 @@ public class SkijaService implements ISkijaService {
     private int lastSurfaceHeight = -1;
 
     public SkijaService() {
-        System.out.println(LOG_PREFIX + "Constructed.");
+        Logger.info(LOG_PREFIX, "Constructed.");
     }
 
     @Override
     public void setup(ClientContext context) throws ServiceException {
-        System.out.println(LOG_PREFIX + "Setup phase (Context/Surface creation deferred).");
+        Logger.info(LOG_PREFIX, "Setup phase (Context/Surface creation deferred).");
 
         try {
             if (fontCollection == null) {
                 fontCollection = new FontCollection();
                 fontCollection.setDefaultFontManager(FontMgr.getDefault());
-                System.out.println(LOG_PREFIX + "FontCollection Initialized.");
+                Logger.info(LOG_PREFIX, "FontCollection Initialized.");
             }
         } catch (Exception e) {
-            System.err.println(LOG_PREFIX + "[ERROR] Failed to initialize FontCollection during setup.");
+            Logger.error(LOG_PREFIX, "Failed to initialize FontCollection during setup.");
             throw new ServiceException("Failed to setup FontCollection", e);
         }
     }
 
     @Override
     public void initialize(ClientContext context) throws ServiceException {
-        System.out.println(LOG_PREFIX + "Initializing...");
+        Logger.info(LOG_PREFIX, "Initializing...");
         try {
             ensureSurface();
             if (isInitialized()) {
-                System.out.println(LOG_PREFIX + "Initial surface check/creation successful.");
+                Logger.info(LOG_PREFIX, "Initial surface check/creation successful.");
             } else {
-                System.out.println(LOG_PREFIX + "[WARN] Initial surface creation failed or deferred.");
+                Logger.warn(LOG_PREFIX, "Initial surface creation failed or deferred.");
             }
         } catch (Exception e) {
-            System.err.println(LOG_PREFIX + "[ERROR] Error during initial surface check/creation: " + e.getMessage());
+            Logger.error(LOG_PREFIX, "Error during initial surface check/creation: " + e.getMessage());
         }
-        System.out.println(LOG_PREFIX + "Initialization complete.");
+        Logger.info(LOG_PREFIX, "Initialization complete.");
     }
 
     @Override
     public void shutdown(ClientContext context) throws ServiceException {
-        System.out.println(LOG_PREFIX + "Shutting down...");
+        Logger.info(LOG_PREFIX, "Shutting down...");
         try {
             if (fontCollection != null) fontCollection.close();
             if (skijaSurface != null) skijaSurface.close();
             if (renderTarget != null) renderTarget.close();
             if (skijaContext != null) skijaContext.close();
-            System.out.println(LOG_PREFIX + "Skija resources closed.");
+            Logger.info(LOG_PREFIX, "Skija resources closed.");
         } catch (Exception e) {
-            System.err.println(LOG_PREFIX + "[ERROR] Error during Skija resource shutdown: " + e.getMessage());
+            Logger.error(LOG_PREFIX, "Error during Skija resource shutdown: " + e.getMessage());
         } finally {
             skijaSurface = null;
             renderTarget = null;
@@ -82,7 +83,7 @@ public class SkijaService implements ISkijaService {
             initialized = false;
             lastSurfaceWidth = -1;
             lastSurfaceHeight = -1;
-            System.out.println(LOG_PREFIX + "Shutdown complete.");
+            Logger.info(LOG_PREFIX, "Shutdown complete.");
         }
     }
 
@@ -92,7 +93,7 @@ public class SkijaService implements ISkijaService {
             try {
                 ensureSurface();
             } catch (Exception e) {
-                System.err.println(LOG_PREFIX + "[ERROR] Lazy context creation failed: " + e.getMessage());
+                Logger.error(LOG_PREFIX, "Lazy context creation failed: " + e.getMessage());
             }
         }
         return skijaContext;
@@ -104,7 +105,7 @@ public class SkijaService implements ISkijaService {
             try {
                 ensureSurface();
             } catch (Exception e) {
-                System.err.println(LOG_PREFIX + "[ERROR] Lazy surface creation/update failed: " + e.getMessage());
+                Logger.error(LOG_PREFIX, "Lazy surface creation/update failed: " + e.getMessage());
             }
         }
         return skijaSurface;
@@ -132,10 +133,10 @@ public class SkijaService implements ISkijaService {
         int currentHeight = mc.displayHeight;
 
         if (skijaContext == null) {
-            System.out.println(LOG_PREFIX + "Creating Skija DirectContext...");
+            Logger.info(LOG_PREFIX, "Creating Skija DirectContext...");
             try {
                 skijaContext = DirectContext.makeGL();
-                System.out.println(LOG_PREFIX + "Skija DirectContext created successfully.");
+                Logger.info(LOG_PREFIX, "Skija DirectContext created successfully.");
             } catch (Exception e) {
                 initialized = false;
                 throw new ServiceException("Failed to create Skija DirectContext", e);
@@ -143,7 +144,7 @@ public class SkijaService implements ISkijaService {
         }
 
         if (skijaSurface == null || renderTarget == null || currentWidth != lastSurfaceWidth || currentHeight != lastSurfaceHeight) {
-            System.out.println(LOG_PREFIX + "Creating/Recreating Skija Surface for dimensions: " + currentWidth + "x" + currentHeight);
+            Logger.info(LOG_PREFIX, "Creating/Recreating Skija Surface for dimensions: " + currentWidth + "x" + currentHeight);
 
             if (skijaSurface != null) skijaSurface.close();
             if (renderTarget != null) renderTarget.close();
@@ -182,10 +183,10 @@ public class SkijaService implements ISkijaService {
                 lastSurfaceWidth = currentWidth;
                 lastSurfaceHeight = currentHeight;
                 initialized = true;
-                System.out.println(LOG_PREFIX + "Skija Surface created/recreated successfully.");
+                Logger.info(LOG_PREFIX, "Skija Surface created/recreated successfully.");
 
             } catch (Exception e) {
-                System.err.println(LOG_PREFIX + "[ERROR] Failed to create/recreate Skija Surface/RenderTarget.");
+                Logger.error(LOG_PREFIX, "Failed to create/recreate Skija Surface/RenderTarget.");
                 if (skijaSurface != null) {
                     skijaSurface.close();
                     skijaSurface = null;
@@ -225,7 +226,7 @@ public class SkijaService implements ISkijaService {
                 skijaContext.flush();
             }
         } catch (Exception e) {
-            System.err.println(LOG_PREFIX + "[ERROR] Exception during Skija flush: " + e.getMessage());
+            Logger.error(LOG_PREFIX, "Exception during Skija flush: " + e.getMessage());
         } finally {
             UIState.restore();
         }
@@ -236,7 +237,7 @@ public class SkijaService implements ISkijaService {
         try {
             ensureSurface();
         } catch (ServiceException e) {
-            System.err.println(LOG_PREFIX + "[ERROR] Failed to ensure Skija surface before running frame: " + e.getMessage());
+            Logger.error(LOG_PREFIX, "Failed to ensure Skija surface before running frame: " + e.getMessage());
             return;
         }
 
@@ -248,7 +249,7 @@ public class SkijaService implements ISkijaService {
         try {
             render.run();
         } catch (Throwable t) {
-            System.err.println(LOG_PREFIX + "[ERROR] Exception within Skija render task:");
+            Logger.error(LOG_PREFIX, "Exception within Skija render task:");
             t.printStackTrace();
         } finally {
             endFrame();
