@@ -8,11 +8,8 @@ import dev.revere.valance.event.type.packet.PacketEvent;
 import dev.revere.valance.module.Category;
 import dev.revere.valance.module.annotation.ModuleInfo;
 import dev.revere.valance.module.api.AbstractModule;
+import dev.revere.valance.properties.Property;
 import dev.revere.valance.service.IEventBusService;
-import dev.revere.valance.settings.Setting;
-import dev.revere.valance.settings.type.BooleanSetting;
-import dev.revere.valance.settings.type.EnumSetting;
-import dev.revere.valance.settings.type.NumberSetting;
 import dev.revere.valance.util.MinecraftUtil;
 import io.netty.buffer.Unpooled;
 import net.minecraft.nbt.NBTTagCompound;
@@ -77,15 +74,19 @@ public class ProxyCrashModule extends AbstractModule {
         }
     }
 
-    private final Setting<AttackMode> attackMode = new EnumSetting<>("Mode", AttackMode.NONE);
-    private final Setting<Integer> intensity = new NumberSetting<>("Intensity", 100, 1, 500)
-            .setVisibility(() -> attackMode.getValue() != AttackMode.NONE);
-    private final Setting<Boolean> autoRotate = new BooleanSetting("Auto-Rotate", false)
-            .setVisibility(() -> attackMode.getValue() != AttackMode.NONE);
-    private final Setting<Boolean> bypassMode = new BooleanSetting("Bypass", true);
+    private final Property<AttackMode> attackMode = new Property<>("Mode", AttackMode.NONE);
+
+    private final Property<Integer> intensity = new Property<>("Intensity", 100)
+            .minimum(1)
+            .maximum(500)
+            .visibleWhen(() -> attackMode.getValue() != AttackMode.NONE);
+
+    private final Property<Boolean> autoRotate = new Property<>("Auto-Rotate", false)
+            .visibleWhen(() -> attackMode.getValue() != AttackMode.NONE);
+
+    private final Property<Boolean> bypassMode = new Property<>("Bypass", true);
 
     private long lastAttackTime = 0L;
-    private AttackMode currentAttack = AttackMode.NONE;
 
     public ProxyCrashModule(IEventBusService eventBusService) {
         super(eventBusService);
@@ -119,7 +120,7 @@ public class ProxyCrashModule extends AbstractModule {
     }
 
     private void executeAttack() {
-        currentAttack = attackMode.getValue();
+        AttackMode currentAttack = attackMode.getValue();
         int packetsToSend = Math.max(1, intensity.getValue() * 5);
 
         try {

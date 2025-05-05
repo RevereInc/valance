@@ -3,9 +3,8 @@ package dev.revere.valance.module.impl.render;
 import dev.revere.valance.module.Category;
 import dev.revere.valance.module.annotation.ModuleInfo;
 import dev.revere.valance.module.api.AbstractModule;
+import dev.revere.valance.properties.Property;
 import dev.revere.valance.service.IEventBusService;
-import dev.revere.valance.settings.Setting;
-import dev.revere.valance.settings.type.NumberSetting;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.GL11;
 
@@ -16,7 +15,7 @@ import org.lwjgl.opengl.GL11;
         category = Category.RENDER
 )
 public class MotionBlurModule extends AbstractModule {
-    private final Setting<Integer> strength = new NumberSetting<>("Strength", 6, 1, 10, 1);
+    private final Property<Integer> strength = new Property<>("Strength", 6).minimum(1).maximum(10);
 
     /**
      * Constructor for dependency injection.

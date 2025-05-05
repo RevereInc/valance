@@ -35,6 +35,7 @@ public class DraggableManagerService implements IDraggableService {
 
     @Inject
     public DraggableManagerService(IConfigService configService) {
+        LoggerUtil.info(LOG_PREFIX, "Constructed.");
         this.configService = configService;
     }
 

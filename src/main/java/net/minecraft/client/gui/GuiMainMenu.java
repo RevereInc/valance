@@ -11,6 +11,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import dev.revere.valance.ui.screen.alt.AltManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.OpenGlHelper;
@@ -226,6 +228,7 @@ public class GuiMainMenu extends GuiScreen implements GuiYesNoCallback
     {
         this.buttonList.add(new GuiButton(1, this.width / 2 - 100, p_73969_1_, I18n.format("menu.singleplayer", new Object[0])));
         this.buttonList.add(new GuiButton(2, this.width / 2 - 100, p_73969_1_ + p_73969_2_ * 1, I18n.format("menu.multiplayer", new Object[0])));
+        this.buttonList.add(new GuiButton(69, this.width / 2 - 100, p_73969_1_ + p_73969_2_ * 3, "Alt Manager"));
 
         if (Reflector.GuiModList_Constructor.exists())
         {
@@ -271,6 +274,10 @@ public class GuiMainMenu extends GuiScreen implements GuiYesNoCallback
         if (button.id == 2)
         {
             this.mc.displayGuiScreen(new GuiMultiplayer(this));
+        }
+
+        if (button.id == 69) {
+            this.mc.displayGuiScreen(new AltManager());
         }
 
         if (button.id == 14 && this.realmsButton.visible)

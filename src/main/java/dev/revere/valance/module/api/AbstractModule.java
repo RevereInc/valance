@@ -5,8 +5,8 @@ import dev.revere.valance.event.type.client.ModuleStateChangedEvent;
 import dev.revere.valance.input.BindType;
 import dev.revere.valance.module.Category;
 import dev.revere.valance.module.annotation.ModuleInfo;
+import dev.revere.valance.properties.Property;
 import dev.revere.valance.service.IEventBusService;
-import dev.revere.valance.settings.Setting;
 import dev.revere.valance.util.LoggerUtil;
 import dev.revere.valance.util.MinecraftUtil;
 import lombok.Getter;
@@ -15,9 +15,8 @@ import net.minecraft.client.Minecraft;
 import org.lwjgl.input.Keyboard;
 
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.lang.reflect.Modifier;
+import java.util.*;
 
 /**
  * @author Remi
@@ -31,7 +30,7 @@ public abstract class AbstractModule implements IModule {
 
     public final Minecraft mc = Minecraft.getMinecraft();
 
-    private List<Setting<?>> discoveredSettings = null;
+    private final List<Property<?>> properties = new ArrayList<>();
 
     // --- Injected Services (Common) ---
     protected final IEventBusService eventBusService;
@@ -138,50 +137,23 @@ public abstract class AbstractModule implements IModule {
     }
 
     /**
-     * Discovers and returns settings declared as fields within this module instance.
-     * Uses reflection and caches the result.
-     * @return An unmodifiable list of settings found in this module.
+     * Retrieves the property hierarchy.
+     *
+     * @return The property hierarchy of the module.
      */
     @Override
-    public final List<Setting<?>> getSettings() {
-        if (discoveredSettings == null) {
-            discoveredSettings = findSettingsViaReflection();
+    public List<Property<?>> getPropertyHierarchy() {
+        List<Property<?>> hierarchy = new ArrayList<>();
+
+        for (Property<?> property : properties) {
+            hierarchy.add(property);
+            hierarchy.addAll(property.getHierarchy());
         }
-        return discoveredSettings;
+
+        return hierarchy;
     }
 
-    private List<Setting<?>> findSettingsViaReflection() {
-        LoggerUtil.debug(LOG_PREFIX, "Discovering settings for: " + getName());
-        List<Setting<?>> foundSettings = new ArrayList<>();
-        Class<?> currentClass = this.getClass();
-
-        while (currentClass != null && currentClass != Object.class) {
-            for (Field field : currentClass.getDeclaredFields()) {
-                if (Setting.class.isAssignableFrom(field.getType())) {
-                    try {
-                        field.setAccessible(true);
-                        Object settingObject = field.get(this);
-                        if (settingObject instanceof Setting<?>) {
-                            Setting<?> setting = (Setting<?>) settingObject;
-                            if(foundSettings.stream().noneMatch(s -> s.getName().equalsIgnoreCase(setting.getName()))){
-                                foundSettings.add(setting);
-                            } else {
-                                LoggerUtil.warn(LOG_PREFIX, "Duplicate setting name '" + setting.getName() + "' found in " + getName() + ". Check field declarations.");
-                            }
-                        }
-                    } catch (IllegalAccessException e) {
-                        LoggerUtil.error(LOG_PREFIX, "Failed to access setting field '" + field.getName() + "' in " + getName());
-                        e.printStackTrace();
-                    } catch (Exception e) {
-                        LoggerUtil.error(LOG_PREFIX, "Error accessing field '" + field.getName() + "' in " + getName() + ": " + e.getMessage());
-                    }
-                }
-            }
-            currentClass = currentClass.getSuperclass();
-        }
-        LoggerUtil.debug(LOG_PREFIX, "Found " + foundSettings.size() + " settings for: " + getName());
-        return Collections.unmodifiableList(foundSettings);
+    protected final MinecraftUtil mc() {
+        return null;
     }
-
-    protected final MinecraftUtil mc() { return null; }
 }

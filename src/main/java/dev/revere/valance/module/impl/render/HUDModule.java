@@ -6,14 +6,10 @@ import dev.revere.valance.event.type.render.Render2DEvent;
 import dev.revere.valance.module.annotation.ModuleInfo;
 import dev.revere.valance.module.api.AbstractModule;
 import dev.revere.valance.module.api.IModule;
+import dev.revere.valance.properties.Property;
 import dev.revere.valance.service.IEventBusService;
 import dev.revere.valance.service.IModuleManager;
 import dev.revere.valance.service.ISkijaService;
-import dev.revere.valance.settings.Setting;
-import dev.revere.valance.settings.type.BooleanSetting;
-import dev.revere.valance.settings.type.ColorSetting;
-import dev.revere.valance.settings.type.EnumSetting;
-import dev.revere.valance.settings.type.NumberSetting;
 import dev.revere.valance.util.ColorUtil;
 import dev.revere.valance.util.render.SkijaRenderUtil;
 import io.github.humbleui.skija.Canvas;
@@ -37,32 +33,60 @@ public class HUDModule extends AbstractModule {
     private final ISkijaService skijaService;
     private final IModuleManager moduleManager;
 
-    public final Setting<Boolean> arraylist = new BooleanSetting("ArrayList", true, "Render the module list?");
-    public final Setting<Boolean> lowercase = new BooleanSetting("Lowercase", false, "Force ArrayList text lowercase?");
-    public final Setting<Boolean> watermark = new BooleanSetting("Watermark", true, "Render the watermark?");
-    public final Setting<Boolean> background = new BooleanSetting("Background", false, "Render backgrounds for elements?");
-    public final Setting<Boolean> shaderBg = new BooleanSetting("BackgroundBlur", false, "Apply blur effect to backgrounds?");
-    public final Setting<Boolean> textGlow = new BooleanSetting("TextGlow", true, "Apply subtle glow to text?");
-    public final Setting<Boolean> fps = new BooleanSetting("FPS", true, "Render FPS counter?");
-    public final Setting<Boolean> bps = new BooleanSetting("BPS", true, "Render BPS counter?");
-    public final Setting<Boolean> textShadow = new BooleanSetting("TextShadow", true, "Apply shadow to text?");
-    public final Setting<BackgroundMode> backgroundMode = new EnumSetting<>("BackgroundMode", BackgroundMode.CUSTOM, "The background mode to use for the Array List", () -> true);
-    public final Setting<WatermarkMode> watermarkMode = new EnumSetting<>("WatermarkType", WatermarkMode.CSGO, "The watermark mode to use for the HUD", () -> true);
-    public final Setting<ColorMode> colorMode = new EnumSetting<>("ColorMode", ColorMode.CLIENT, "Color theme for HUD elements", () -> true);
-    public final Setting<FontType> fontType = new EnumSetting<>("Font", FontType.DEFAULT, "Font type for the HUD", () -> true);
-    public final Setting<OutlineMode> arrayListOutline = new EnumSetting<>("Outline", OutlineMode.TOP, "How to outline the arraylist", () -> true);
-    public final Setting<SortingSetting> sortingSetting = new EnumSetting<>("Sorting", SortingSetting.LENGTH, "How to sort the arraylist", () -> true);
-    public final Setting<MetaData> arrayListMetaData = new EnumSetting<>("Metadata", MetaData.SIMPLE, "How to draw the module metadata", () -> true);
-    public final Setting<Integer> customColor1 = new ColorSetting("FirstColor", new Color(0xFF1B1B).getRGB(), true, "Custom color for static or fade", () -> true);
-    public final Setting<Integer> customColor2 = new ColorSetting("SecondColor", new Color(0xFFFFFF).getRGB(), true, "Second custom color for fade", () -> true);
-    private final Setting<Integer> opacity = new NumberSetting<>("Opacity", 100, 0, 255, 1);
-    public final Setting<Float> rainbowSpeed = new NumberSetting<>("RainbowSpeed", 12f, 1f, 20f, 1f);
-    public final Setting<Float> fadeSpeed = new NumberSetting<>("FadeSpeed", 10.0f, 1f, 20f, 0.1f);
-    public final Setting<Float> colorSpacing = new NumberSetting<>("ColorSpacing", 1.0f, 1f, 10f, 0.1f);
-    public final Setting<Float> elementHeight = new NumberSetting<>("ArrayListHeight", 1f, 1f, 25f, 0.5f);
-    public final Setting<Float> fontSize = new NumberSetting<>("FontSize", 20f, 8f, 40f, 1f);
-    public final Setting<Float> arraylistXPos = new NumberSetting<>("ArrayListX", 6.5f, 0f, 1000f, 1f);
-    public final Setting<Float> arraylistYPos = new NumberSetting<>("ArrayListY", 5f, 0f, 1000f, 1f);
+    // --- Properties ---
+    public final Property<Boolean> arraylist = new Property<>("ArrayList", true).describedBy("Render the module list?");
+    public final Property<Boolean> lowercase = new Property<>("Lowercase", false).describedBy("Force ArrayList text lowercase?");
+    public final Property<Boolean> watermark = new Property<>("Watermark", true).describedBy("Render the watermark?");
+    public final Property<Boolean> background = new Property<>("Background", false).describedBy("Render backgrounds for elements?");
+    public final Property<Boolean> shaderBg = new Property<>("BackgroundBlur", false).describedBy("Apply blur effect to backgrounds?");
+    public final Property<Boolean> textGlow = new Property<>("TextGlow", true).describedBy("Apply subtle glow to text?");
+    public final Property<Boolean> fps = new Property<>("FPS", true).describedBy("Render FPS counter?");
+    public final Property<Boolean> bps = new Property<>("BPS", true).describedBy("Render BPS counter?");
+    public final Property<Boolean> textShadow = new Property<>("TextShadow", true).describedBy("Apply shadow to text?");
+
+    public final Property<BackgroundMode> backgroundMode = new Property<>("BackgroundMode", BackgroundMode.CUSTOM).describedBy("The background mode to use for the Array List");
+    public final Property<WatermarkMode> watermarkMode = new Property<>("WatermarkType", WatermarkMode.CSGO).describedBy("The watermark mode to use for the HUD");
+    public final Property<ColorMode> colorMode = new Property<>("ColorMode", ColorMode.CLIENT).describedBy("Color theme for HUD elements");
+    public final Property<FontType> fontType = new Property<>("Font", FontType.DEFAULT).describedBy("Font type for the HUD");
+    public final Property<OutlineMode> arrayListOutline = new Property<>("Outline", OutlineMode.TOP).describedBy("How to outline the arraylist");
+    public final Property<SortingSetting> sortingSetting = new Property<>("Sorting", SortingSetting.LENGTH).describedBy("How to sort the arraylist");
+    public final Property<MetaData> arrayListMetaData = new Property<>("Metadata", MetaData.SIMPLE).describedBy("How to draw the module metadata");
+
+    public final Property<Integer> customColor1 = new Property<>("FirstColor", new Color(0xFF1B1B).getRGB()).describedBy("Custom color for static or fade");
+    public final Property<Integer> customColor2 = new Property<>("SecondColor", new Color(0xFFFFFF).getRGB()).describedBy("Second custom color for fade");
+
+    private final Property<Integer> opacity = new Property<>("Opacity", 100)
+            .minimum(0)
+            .maximum(255)
+            .increment(1);
+    public final Property<Float> rainbowSpeed = new Property<>("RainbowSpeed", 12f)
+            .minimum(1f)
+            .maximum(20f)
+            .increment(1f);
+    public final Property<Float> fadeSpeed = new Property<>("FadeSpeed", 10.0f)
+            .minimum(1f)
+            .maximum(20f)
+            .increment(0.1f);
+    public final Property<Float> colorSpacing = new Property<>("ColorSpacing", 1.0f)
+            .minimum(1f)
+            .maximum(10f)
+            .increment(0.1f);
+    public final Property<Float> elementHeight = new Property<>("ArrayListHeight", 1f)
+            .minimum(1f)
+            .maximum(25f)
+            .increment(0.5f);
+    public final Property<Float> fontSize = new Property<>("FontSize", 20f)
+            .minimum(8f)
+            .maximum(40f)
+            .increment(1f);
+    public final Property<Float> arraylistXPos = new Property<>("ArrayListX", 6.5f)
+            .minimum(0f)
+            .maximum(1000f)
+            .increment(1f);
+    public final Property<Float> arraylistYPos = new Property<>("ArrayListY", 5f)
+            .minimum(0f)
+            .maximum(1000f)
+            .increment(1f);
 
     private static final float TEXT_V_PADDING = 2.0f;
 
@@ -81,19 +105,20 @@ public class HUDModule extends AbstractModule {
         super(eventBusService);
         this.skijaService = skijaService;
         this.moduleManager = moduleManager;
-        setEnabled(true);
 
-        lowercase.setVisibility(arraylist::getValue);
-        shaderBg.setVisibility(background::getValue);
-        arrayListOutline.setVisibility(arraylist::getValue);
-        sortingSetting.setVisibility(arraylist::getValue);
-        customColor1.setVisibility(() -> colorMode.getValue() == ColorMode.CUSTOM || colorMode.getValue() == ColorMode.STATIC);
-        customColor2.setVisibility(() -> colorMode.getValue() == ColorMode.CUSTOM);
-        opacity.setVisibility(background::getValue);
-        rainbowSpeed.setVisibility(() -> colorMode.getValue() == ColorMode.RAINBOW || colorMode.getValue() == ColorMode.RAINBOW_PULSE);
-        fadeSpeed.setVisibility(() -> colorMode.getValue() == ColorMode.CUSTOM || colorMode.getValue() == ColorMode.CLIENT || colorMode.getValue() == ColorMode.RAINBOW_PULSE);
-        colorSpacing.setVisibility(() -> colorMode.getValue() == ColorMode.CUSTOM || colorMode.getValue() == ColorMode.RAINBOW || colorMode.getValue() == ColorMode.CLIENT || colorMode.getValue() == ColorMode.RAINBOW_PULSE);
-        elementHeight.setVisibility(arraylist::getValue);
+        lowercase.visibleWhen(arraylist::getValue);
+        shaderBg.visibleWhen(background::getValue);
+        arrayListOutline.visibleWhen(arraylist::getValue);
+        sortingSetting.visibleWhen(arraylist::getValue);
+        customColor1.visibleWhen(() -> colorMode.getValue() == ColorMode.CUSTOM || colorMode.getValue() == ColorMode.STATIC);
+        customColor2.visibleWhen(() -> colorMode.getValue() == ColorMode.CUSTOM);
+        opacity.visibleWhen(background::getValue);
+        rainbowSpeed.visibleWhen(() -> colorMode.getValue() == ColorMode.RAINBOW || colorMode.getValue() == ColorMode.RAINBOW_PULSE);
+        fadeSpeed.visibleWhen(() -> colorMode.getValue() == ColorMode.CUSTOM || colorMode.getValue() == ColorMode.CLIENT || colorMode.getValue() == ColorMode.RAINBOW_PULSE);
+        colorSpacing.visibleWhen(() -> colorMode.getValue() == ColorMode.CUSTOM || colorMode.getValue() == ColorMode.RAINBOW || colorMode.getValue() == ColorMode.CLIENT || colorMode.getValue() == ColorMode.RAINBOW_PULSE);
+        elementHeight.visibleWhen(arraylist::getValue);
+
+        setEnabled(true);
     }
 
     @Subscribe
@@ -373,7 +398,7 @@ public class HUDModule extends AbstractModule {
     }
 
     private String getModuleMetadataString(IModule module) {
-        return module.getSettings().stream().filter(s -> s.getValue() instanceof Enum && s.getName().equalsIgnoreCase("Mode")).map(s -> ((Enum<?>) s.getValue()).name()).findFirst().orElse("");
+        return module.getPropertyHierarchy().stream().filter(s -> s.getValue() instanceof Enum && s.getName().equalsIgnoreCase("Mode")).map(s -> ((Enum<?>) s.getValue()).name()).findFirst().orElse("");
     }
 
     public double getSpeed() {

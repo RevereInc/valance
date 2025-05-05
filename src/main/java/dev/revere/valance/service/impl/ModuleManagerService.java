@@ -8,7 +8,9 @@ import dev.revere.valance.core.exception.ServiceException;
 import dev.revere.valance.core.lifecycle.IService;
 import dev.revere.valance.module.Category;
 import dev.revere.valance.module.annotation.ModuleInfo;
+import dev.revere.valance.module.api.AbstractModule;
 import dev.revere.valance.module.api.IModule;
+import dev.revere.valance.properties.Property;
 import dev.revere.valance.service.IEventBusService;
 import dev.revere.valance.service.IModuleManager;
 import dev.revere.valance.util.LoggerUtil;
@@ -18,6 +20,7 @@ import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ScanResult;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -126,6 +129,14 @@ public class ModuleManagerService implements IModuleManager {
                         registeredModuleCount++;
                     }
 
+                    // --- Populate Properties ---
+                    if (moduleInstance instanceof AbstractModule) {
+                        AbstractModule abstractModule = (AbstractModule) moduleInstance;
+                        populateAbstractModuleProperties(abstractModule);
+                    } else {
+                        LoggerUtil.warn(LOG_PREFIX, "Module " + moduleInstance.getName() + " is not AbstractModule, properties not populated.");
+                    }
+
                 } catch (Exception e) {
                     LoggerUtil.error(LOG_PREFIX, "Failed to instantiate or register module " + moduleClassInfo.getName() + ".", e);
                     throw new ServiceException("Failed to process module: " + moduleClassInfo.getName(), e);
@@ -138,6 +149,63 @@ public class ModuleManagerService implements IModuleManager {
 
         long durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNs);
         LoggerUtil.info(LOG_PREFIX, "Module registration complete (" + durationMs + "ms). Registered " + registeredModuleCount + "/" + potentialModuleCount + " modules.");
+    }
+
+    /**
+     * Populates the internal 'properties' list of an AbstractModule instance
+     * using reflection, based on the logic from the user's snippet.
+     *
+     * @param abstractModule The module instance whose properties need populating.
+     */
+    private void populateAbstractModuleProperties(AbstractModule abstractModule) {
+        try {
+            Field propsField = AbstractModule.class.getDeclaredField("properties");
+            propsField.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            List<Property<?>> actualList = (List<Property<?>>) propsField.get(abstractModule);
+            actualList.clear();
+
+            int addedCount = 0;
+            Set<Field> fieldsToProcess = new HashSet<>();
+            Class<?> currentClass = abstractModule.getClass();
+            while (currentClass != null && currentClass != Object.class) {
+                fieldsToProcess.addAll(Arrays.asList(currentClass.getDeclaredFields()));
+                currentClass = currentClass.getSuperclass();
+            }
+
+            for(Field field : fieldsToProcess) {
+                if (Property.class.isAssignableFrom(field.getType())) {
+                    field.setAccessible(true);
+                    try {
+                        Property<?> property = (Property<?>) field.get(abstractModule);
+
+                        if (property != null) {
+                            if (property.getParent() == null) {
+                                if (!actualList.contains(property)) {
+                                    actualList.add(property);
+                                    addedCount++;
+                                }
+                            }
+                        } else {
+                            LoggerUtil.warn(LOG_PREFIX, "Property field '" + field.getName() + "' is NULL in module '" + abstractModule.getName() + "'.");
+                        }
+                    } catch (IllegalAccessException e) {
+                        LoggerUtil.error(LOG_PREFIX, "[Reflect:Populate] Failed access property " + field.getName() + " for " + abstractModule.getName(), e);
+                    } catch (Exception e) {
+                        LoggerUtil.error(LOG_PREFIX, "[Reflect:Populate] Error processing property " + field.getName() + " for " + abstractModule.getName(), e);
+                    }
+                }
+            }
+            actualList.sort(Comparator.comparing(Property::getName));
+            LoggerUtil.debug(LOG_PREFIX, "Populated " + addedCount + " top-level properties for module " + abstractModule.getName());
+
+        } catch (NoSuchFieldException e) {
+            LoggerUtil.error(LOG_PREFIX, "[Reflect:GetList] Failed to find 'properties' field in AbstractModule for " + abstractModule.getName(), e);
+        } catch (IllegalAccessException e) {
+            LoggerUtil.error(LOG_PREFIX, "[Reflect:GetList] Failed to access 'properties' field for " + abstractModule.getName(), e);
+        } catch (Exception e) {
+            LoggerUtil.error(LOG_PREFIX, "[Reflect:GetList] Unexpected error accessing properties list for " + abstractModule.getName(), e);
+        }
     }
 
     /**

@@ -2,7 +2,7 @@ package dev.revere.valance.module.api;
 
 import dev.revere.valance.event.Listener;
 import dev.revere.valance.module.Category;
-import dev.revere.valance.settings.Setting;
+import dev.revere.valance.properties.Property;
 
 import java.util.List;
 
@@ -87,9 +87,9 @@ public interface IModule extends Listener {
     boolean isHidden();
 
     /**
-     * Returns the list of settings associated with this module.
+     * Retrieves the property hierarchy.
      *
-     * @return The list of settings for the module.
+     * @return The property hierarchy of the module.
      */
-    List<Setting<?>> getSettings();
+    List<Property<?>> getPropertyHierarchy();
 }

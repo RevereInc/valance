@@ -150,7 +150,7 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
     private Entity renderViewEntity;
     public Entity pointedEntity;
     public EffectRenderer effectRenderer;
-    private final Session session;
+    public Session session;
     private boolean isGamePaused;
     public FontRenderer fontRendererObj;
     public FontRenderer standardGalacticFontRenderer;
@@ -229,7 +229,7 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
         this.proxy = gameConfig.userInfo.proxy == null ? Proxy.NO_PROXY : gameConfig.userInfo.proxy;
         this.sessionService = (new YggdrasilAuthenticationService(gameConfig.userInfo.proxy, UUID.randomUUID().toString())).createMinecraftSessionService();
         this.session = gameConfig.userInfo.session;
-        this.session.setUsername("3245rt22u3hsdf");
+        this.session.setUsername("bigmanremi");
         logger.info("Setting user: " + this.session.getUsername());
         logger.info("(Session ID is " + this.session.getSessionID() + ")");
         this.isDemo = gameConfig.gameInfo.isDemo;
@@ -752,6 +752,7 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
 
     public void shutdownMinecraftApplet() {
         try {
+            ClientLoader.shutdown();
             this.stream.shutdownStream();
             logger.info("Stopping!");
 

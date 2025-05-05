@@ -1,6 +1,7 @@
 package dev.revere.valance.util;
 
 import net.minecraft.client.entity.EntityPlayerSP;
+import net.minecraft.entity.Entity;
 import net.minecraft.potion.Potion;
 import net.minecraft.util.MathHelper;
 
@@ -58,6 +59,23 @@ public final class MoveUtil {
             rotationYaw += 90 * forward;
         }
         return Math.toRadians(rotationYaw);
+    }
+
+    public static void strafe() {
+        strafe(speed(), mc().thePlayer);
+    }
+
+    /**
+     * Makes the player strafe at the specified speed
+     */
+    public static void strafe(final double speed, Entity entity) {
+        if (!isMoving()) {
+            return;
+        }
+
+        final double yaw = direction();
+        entity.motionX = -MathHelper.sin((float) yaw) * speed;
+        entity.motionZ = MathHelper.cos((float) yaw) * speed;
     }
 
     /** Sets the player's motion based on direction and speed. */

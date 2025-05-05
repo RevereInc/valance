@@ -331,7 +331,7 @@ public final class ClientContext {
 
         LoggerUtil.info(LOG_PREFIX, "Setting up service: " + serviceInterface.getSimpleName());
         try {
-            instance.setup(this); // Pass context
+            instance.setup(this);
             serviceStates.put(serviceInterface, ServiceState.SETUP);
             LoggerUtil.info(LOG_PREFIX, "Setup service: " + serviceInterface.getSimpleName() + " successfully.");
         } catch (Exception e) {
@@ -364,7 +364,7 @@ public final class ClientContext {
         serviceStates.put(serviceInterface, ServiceState.INITIALIZING);
         LoggerUtil.info(LOG_PREFIX, "Initializing service: " + serviceInterface.getSimpleName());
         try {
-            instance.initialize(this); // Pass context
+            instance.initialize(this);
             serviceStates.put(serviceInterface, ServiceState.INITIALIZED);
             LoggerUtil.info(LOG_PREFIX, "Initialized service: " + serviceInterface.getSimpleName() + " successfully.");
         } catch (Exception e) {

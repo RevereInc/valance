@@ -6,9 +6,8 @@ import dev.revere.valance.event.type.player.PreMotionEvent;
 import dev.revere.valance.module.Category;
 import dev.revere.valance.module.annotation.ModuleInfo;
 import dev.revere.valance.module.api.AbstractModule;
+import dev.revere.valance.properties.Property;
 import dev.revere.valance.service.IEventBusService;
-import dev.revere.valance.settings.Setting;
-import dev.revere.valance.settings.type.NumberSetting;
 import net.minecraft.network.Packet;
 import net.minecraft.network.play.INetHandlerPlayClient;
 import net.minecraft.network.play.server.S03PacketTimeUpdate;
@@ -20,8 +19,8 @@ import net.minecraft.network.play.server.S03PacketTimeUpdate;
  */
 @ModuleInfo(name = "Ambience", displayName = "Ambience", description = "Module to handle ambience effects.", category = Category.RENDER)
 public class AmbienceModule extends AbstractModule {
-    private final Setting<Integer> time = new NumberSetting<>("Time", 1000, 0, 22999);
-    private final Setting<WeatherMode> weather = new Setting<>("Weather", WeatherMode.UNCHANGED);
+    private final Property<Integer> time = new Property<>("Time", 1000).minimum(0).maximum(22999);
+    private final Property<WeatherMode> weather = new Property<>("Weather", WeatherMode.UNCHANGED);
 
     /**
      * Constructor for dependency injection.
@@ -37,7 +36,7 @@ public class AmbienceModule extends AbstractModule {
     private void onPreMotion(PreMotionEvent event) {
         mc.theWorld.setWorldTime(time.getValue());
 
-        switch(this.weather.getValue()) {
+        switch (this.weather.getValue()) {
             case CLEAR: {
                 resetWeather();
                 break;

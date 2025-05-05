@@ -4,9 +4,8 @@ import dev.revere.valance.ClientLoader;
 import dev.revere.valance.module.Category;
 import dev.revere.valance.module.annotation.ModuleInfo;
 import dev.revere.valance.module.api.AbstractModule;
+import dev.revere.valance.properties.Property;
 import dev.revere.valance.service.IEventBusService;
-import dev.revere.valance.settings.Setting;
-import dev.revere.valance.settings.type.NumberSetting;
 import dev.revere.valance.util.MinecraftUtil;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
@@ -47,9 +46,17 @@ public class AutoRegisterBotModule extends AbstractModule {
         }
     }
 
-    private final Setting<Integer> botCount = new NumberSetting<>("Bots", 5, 1, 10000);
-    private final Setting<Integer> connectTimeout = new NumberSetting<>("ConnectionTimeout", 5000, 1000, 100000);
-    private final Setting<Integer> connectionDelay = new NumberSetting<>("ConnectionDelay", 500, 100, 5000);
+    private final Property<Integer> botCount = new Property<>("Bots", 5)
+            .minimum(1)
+            .maximum(10000);
+
+    private final Property<Integer> connectTimeout = new Property<>("ConnectionTimeout", 5000)
+            .minimum(1000)
+            .maximum(100000);
+
+    private final Property<Integer> connectionDelay = new Property<>("ConnectionDelay", 500)
+            .minimum(100)
+            .maximum(5000);
 
     private final Map<String, BotConnection> bots = new ConcurrentHashMap<>();
     private EventLoopGroup workerGroup;

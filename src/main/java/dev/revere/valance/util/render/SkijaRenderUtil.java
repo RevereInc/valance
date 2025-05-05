@@ -127,7 +127,7 @@ public final class SkijaRenderUtil {
         int currentColor = defaultColor;
 
         try (Paint textPaint = new Paint().setColor(currentColor).setAntiAlias(true);
-             Paint shadowPaint = shadow ? new Paint().setColor(applyOpacity(0x000000, shadowOpacity)).setAntiAlias(true) : null; // Black shadow base
+             Paint shadowPaint = shadow ? new Paint().setColor(applyOpacity(0x000000, shadowOpacity)).setAntiAlias(true) : null;
              Paint glowPaint = glow ? new Paint().setColor(currentColor).setMaskFilter(MaskFilter.makeBlur(FilterBlurMode.NORMAL, 2.0f, false)).setAntiAlias(true) : null
         ) {
 
@@ -171,11 +171,10 @@ public final class SkijaRenderUtil {
                 currentSegment.append(c);
             }
 
-            // Draw final segment
             if (currentSegment.length() > 0) {
                 drawSegment(canvas, font, currentSegment.toString(), currentX, y, textPaint, shadowPaint, glowPaint);
             }
-        } // Auto-close paints
+        }
     }
 
     /**

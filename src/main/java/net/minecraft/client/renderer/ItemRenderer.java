@@ -417,7 +417,7 @@ public class ItemRenderer
 
             if (this.mc.thePlayer.isBurning() && !Reflector.callBoolean(Reflector.ForgeEventFactory_renderFireOverlay, new Object[] {this.mc.thePlayer, Float.valueOf(partialTicks)}))
             {
-                this.renderFireInFirstPerson(partialTicks);
+                //this.renderFireInFirstPerson(partialTicks);
             }
         }
 
